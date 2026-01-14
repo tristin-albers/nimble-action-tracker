@@ -133,7 +133,6 @@ class NimbleActionTracker extends Application {
             for (const user of playerUsers) {
                 await user.setFlag("nimble-action-tracker", "showTracker", true);
             }
-            ui.notifications.info("Requested initiative from players.");
         });
 
         // END COMBAT (GM ends combat)
@@ -157,7 +156,6 @@ class NimbleActionTracker extends Application {
                     ]
                 });
             }
-            ui.notifications.info("Combat ended. Player screens closed and states cleared.");
         });
 
         // REFILL ROW
@@ -255,16 +253,10 @@ Hooks.on("updateUser", (user, changes) => {
             combatActive = true;
             if (!trackerInstance) trackerInstance = new NimbleActionTracker();
             trackerInstance.render(true, { allowSocketOpen: true });
-            new Dialog({
-                title: "Nimble Initiative",
-                content: "GM requests Combat Readiness roll!",
-                buttons: { roll: { label: "Roll", callback: () => trackerInstance.rollCombatReadiness(game.user.character) } }
-            }).render(true);
         } else {
             combatActive = false;
             if (!trackerInstance) trackerInstance = new NimbleActionTracker();
             trackerInstance.close();
-            ui.notifications.info("Combat ended by GM. Tracker closed.");
         }
     }
 });
@@ -338,7 +330,6 @@ Hooks.on("getSceneControlButtons", (controls) => {
 Hooks.on("renderActorDirectory", (app, html) => {
     const button = $(`<button class="nimble-btn"><i class="fas fa-dice-d20"></i> Action Tracker</button>`);
     button.click(() => {
-        console.log("Nimble Tracker | Manual open clicked.");
         if (canPlayerOpenTracker()) {
             trackerInstance.render(true, {focus: true});
         } else {
