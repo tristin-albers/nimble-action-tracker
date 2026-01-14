@@ -10,19 +10,15 @@ const TOOL_ICON = "fas fa-dice-d20";
 
 let combatActive = false; // Module-level state for combat
 
-// Helper: Only allow players to open tracker if combatActive
+
+// Players can always open the tracker now
 function canPlayerOpenTracker() {
-    return game.user.isGM || combatActive;
+    return true;
 }
 
 class NimbleActionTracker extends Application {
-    // Prevent players from opening tracker if not in combat, unless socket-triggered
+    // Players can always open tracker; no notification needed
     render(force, options = {}) {
-        // Allow socket-triggered open (options.allowSocketOpen)
-        if (!game.user.isGM && !combatActive && !options.allowSocketOpen) {
-            ui.notifications.warn("You can only open the tracker during combat.");
-            return;
-        }
         return super.render(force, options);
     }
     constructor(options = {}) {
