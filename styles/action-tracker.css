@@ -48,7 +48,14 @@
     overflow: hidden;
     backdrop-filter: blur(8px);
     animation: nimble-slide-in 0.3s ease-out;
+    /* cursor: grab; */
+/* Only show grab cursor on draggable handles */
+.gm-header {
     cursor: grab;
+}
+.player-row .row-top {
+    cursor: grab;
+}
 }
 
 /* 3. Header & Titles */

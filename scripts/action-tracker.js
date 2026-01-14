@@ -168,7 +168,14 @@ class NimbleActionTracker extends Application {
             await actor.setFlag("nimble-action-tracker", "state", state);
         });
 
-        new Draggable(this, html, html.parent()[0], false);
+        // Make only the GM header or player name row draggable
+        if (game.user.isGM) {
+            const header = html.find('.gm-header')[0];
+            if (header) new Draggable(this, html, header, false);
+        } else {
+            const playerRow = html.find('.player-row .row-top')[0];
+            if (playerRow) new Draggable(this, html, playerRow, false);
+        }
     }
 
    async rollCombatReadiness(actor) {
