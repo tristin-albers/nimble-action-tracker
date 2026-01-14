@@ -1,0 +1,16 @@
+{
+  "id": "nimble-action-tracker",
+  "title": "Nimble Action Tracker",
+  "description": "Floating UI for Nimble 3-action economy.",
+  "version": "1.0.0",
+  "authors": [{ "name": "Your Name" }],
+  "compatibility": {
+    "minimum": "11",
+    "verified": "12"
+  },
+  "relationships": {
+    "systems": [{ "id": "nimble" }]
+  },
+  "esmodules": ["scripts/action-tracker.js"],
+  "styles": ["styles/action-tracker.css"]
+}

@@ -1,0 +1,44 @@
+<div class="nimble-tracker-container">
+    {{#if isGM}}
+        <div class="gm-header">
+            <div class="header-title">Nimble Tracker</div>
+            <button class="request-init icon-btn" style="width: 32px; height: 32px;" title="Request Initiative">
+                <i class="fas fa-broadcast-tower"></i>
+            </button>
+        </div>
+
+        {{#each players}}
+            <div class="player-row modern" data-actor-id="{{this.id}}">
+                <div class="row-top">
+                    <span class="player-name">{{this.name}} <span class="readiness-tag {{this.readiness}}">[{{this.readiness}}]</span></span>
+                    <button class="fill-row-pips icon-btn" style="width: 32px; height: 32px; font-size: 14px;" title="Refill Pips">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                </div>
+                {{!-- The ID here helps the JS find the right container to show the loading state --}}
+                <div class="pip-container" id="pips-{{this.id}}">
+                    <span class="loading-text">Calculating...</span>
+                    {{#each this.pips}}
+                        <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
+                    {{/each}}
+                </div>
+            </div>
+        {{/each}}
+    {{else}}
+        <div class="player-row modern" data-actor-id="{{player.id}}" style="border-bottom: none;">
+            <div class="row-top">
+                <span class="player-name">{{player.name}} <span class="readiness-tag {{player.readiness}}">[{{player.readiness}}]</span></span>
+                <button class="roll-init icon-btn" style="width: 32px; height: 32px; font-size: 14px;" title="Roll Readiness">
+                    <i class="fas fa-dice-d20"></i>
+                </button>
+            </div>
+            
+            <div class="pip-container" id="pips-{{player.id}}" style="margin-top: 8px;">
+                <span class="loading-text">Calculating...</span>
+                {{#each player.pips}}
+                    <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
+                {{/each}}
+            </div>
+        </div>
+    {{/if}}
+</div>

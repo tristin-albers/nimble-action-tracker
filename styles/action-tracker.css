@@ -1,0 +1,198 @@
+/* 1. Main Application Container */
+#nimble-action-tracker {
+    height: auto !important;
+    width: 260px !important; /* Slightly wider for longer class phrases */
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.6));
+    z-index: 60;
+}
+
+/* 2. Window Frame & Blizzard Aesthetic */
+.nimble-tracker-fancy {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.nimble-tracker-fancy .window-header {
+    display: none !important; 
+}
+
+.nimble-tracker-fancy .window-content {
+    background: rgba(20, 23, 30, 0.95) !important;
+    border: 1px solid rgba(138, 146, 167, 0.3) !important;
+    border-radius: 6px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
+    padding: 0 !important;
+    color: #e2e8f0;
+    font-family: "Signika", "Segoe UI", sans-serif;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    animation: nimble-slide-in 0.3s ease-out;
+    cursor: grab;
+}
+
+/* 3. Header & Titles */
+.gm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #8a92a7;
+    text-transform: uppercase;
+}
+
+/* 4. Icon Buttons */
+.icon-btn {
+    background: linear-gradient(180deg, #4a4e5e 0%, #2a2d38 100%) !important;
+    border: 1px solid #111 !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+    color: #cbd5e0 !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    filter: brightness(1.2);
+    border-color: #f1c40f !important;
+}
+
+.roll-init.icon-btn {
+    border-color: rgba(241, 196, 15, 0.4) !important;
+}
+
+/* 5. Player Rows */
+.player-row.modern {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 64px;
+}
+
+.player-row.modern:has(.is-loading) .readiness-tag {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease;
+}
+
+.row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.player-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+/* Base Readiness Tag Style */
+.readiness-tag {
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-left: 6px;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+/* Vigilant - Legendary Gold */
+.readiness-tag.Vigilant {
+    color: #ffb100; 
+    text-shadow: 0 0 8px rgba(255, 177, 0, 0.4);
+}
+
+/* Alert - Muted Common White */
+.readiness-tag.Alert {
+    color: #a3a3a3; /* Muted gray-white */
+    text-shadow: none;
+    font-weight: 500; /* Slightly less "bold" feel for common status */
+}
+
+/* Hesitant - Epic Purple */
+.readiness-tag.Hesitant {
+    color: #a335ee; /* Classic Blizzard Epic Purple */
+    text-shadow: 0 0 8px rgba(163, 53, 238, 0.3);
+}
+
+/* Ensure it stays hidden during the roll calculation */
+.player-row.modern:has(.is-loading) .readiness-tag {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.readiness-tag:not(.Vigilant):not(.Alert):not(.Hesitant) {
+    color: #8a92a7; /* Neutral slate */
+}
+
+/* 6. Pip Container & Loading Logic */
+.pip-container {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    min-height: 20px;
+}
+
+/* Loading Text State */
+.loading-text {
+    display: none; /* Hidden by default */
+    font-size: 0.75rem;
+    font-style: italic;
+    color: #f8b700;
+    white-space: nowrap;
+}
+
+/* Triggered by JS class toggle */
+.pip-container.is-loading .loading-text {
+    display: block;
+    animation: blizzard-pulse 1.5s infinite;
+}
+
+.pip-container.is-loading .pip {
+    display: none; /* Hide pips so text has room */
+}
+
+/* 7. Pip Visuals */
+.pip {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #111;
+    background: #1a1c23;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    cursor: pointer !important;
+    border-color: #ffffff4a;
+    transition: transform 0.2s ease;
+}
+
+.pip.active.neutral  { background: radial-gradient(circle, #44bd32, #2f8b22); border-color: #89e27b; }
+.pip.active.inspired { background: radial-gradient(circle, #f1c40f, #c09e0d); border-color: #ffeb3b; }
+.pip.active.bane     { background: radial-gradient(circle, #9b59b6, #7d4496); border-color: #d7bde2; }
+
+.pip:hover { transform: scale(1.25); border-color: #fff; }
+
+/* 8. Animations */
+@keyframes blizzard-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+@keyframes nimble-slide-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
