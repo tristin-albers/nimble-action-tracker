@@ -21,7 +21,7 @@
 /* 1. Main Application Container */
 #nimble-action-tracker {
     height: auto !important;
-    width: 260px !important; /* Slightly wider for longer class phrases */
+    width: 15rem !important;
     filter: drop-shadow(0 8px 16px rgba(0,0,0,0.6));
     z-index: 60;
 }

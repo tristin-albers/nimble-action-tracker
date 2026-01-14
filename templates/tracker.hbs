@@ -32,16 +32,18 @@
         {{/each}}
     {{else}}
         <div class="player-row modern" data-actor-id="{{player.id}}" style="border-bottom: none;">
-            <div class="row-top">
-                <span class="player-name">{{player.name}} <span class="readiness-tag {{player.readiness}}">{{#if player.readiness}}[{{player.readiness}}]{{/if}}</span></span>
-                {{#unless player.readiness}}
+            <div class="row-top" style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="player-name">{{player.name}}</span>
+                <span class="readiness-tag {{player.readiness}}">{{#if player.readiness}}[{{player.readiness}}]{{/if}}</span>
+            </div>
+            {{#unless player.readiness}}
+                <div style="display: flex; justify-content: center; margin-top: 8px;">
                     <button class="roll-init icon-btn flashy-dice" style="width: 48px; height: 48px; font-size: 24px; animation: dice-flash 1s infinite alternate; box-shadow: 0 0 16px #f1c40f; border-color: #f1c40f;" title="Roll Readiness">
                         <i class="fas fa-dice-d20"></i>
                     </button>
-                {{/unless}}
-            </div>
-            
-            <div class="pip-container" id="pips-{{player.id}}" style="margin-top: 8px;">
+                </div>
+            {{/unless}}
+            <div class="pip-container" id="pips-{{player.id}}" style="margin-top: 8px; justify-content: center;">
                 <span class="loading-text">Calculating...</span>
                 {{#if player.readiness}}
                     {{#each player.pips}}
