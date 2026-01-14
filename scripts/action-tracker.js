@@ -164,6 +164,7 @@ class NimbleActionTracker extends Application {
             const actor = game.actors.get(actorId);
             let state = JSON.parse(JSON.stringify(this._getActorTrackerData(actor)));
             state.pips = state.pips.map(p => ({ type: "neutral", active: true }));
+            state.readiness = "";
             await actor.setFlag("nimble-action-tracker", "state", state);
         });
 
