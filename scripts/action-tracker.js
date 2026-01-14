@@ -108,6 +108,63 @@ class NimbleActionTracker extends Application {
             await actor.setFlag("nimble-action-tracker", "state", state);
         });
 
+        // DRAG-AND-DROP PLAYER REORDER (GM only)
+        if (game.user.isGM) {
+            let dragSrc = null;
+            let originalOrder = [];
+            // Save original order
+            html.find('.player-row').each(function() {
+                originalOrder.push(this.dataset.actorId);
+            });
+            html.find('.player-row .player-name').attr('draggable', true);
+            html.find('.player-row .player-name').on('dragstart', function(ev) {
+                dragSrc = $(this).closest('.player-row')[0];
+                ev.originalEvent.dataTransfer.effectAllowed = 'move';
+                ev.originalEvent.dataTransfer.setData('text/plain', dragSrc.dataset.actorId);
+                $(this).addClass('dragging');
+            });
+            html.find('.player-row').on('dragover', function(ev) {
+                ev.preventDefault();
+                ev.originalEvent.dataTransfer.dropEffect = 'move';
+                $(this).addClass('drag-over');
+            });
+            html.find('.player-row').on('dragleave', function(ev) {
+                $(this).removeClass('drag-over');
+            });
+            html.find('.player-row').on('drop', (ev) => {
+                ev.preventDefault();
+                html.find('.player-row').removeClass('drag-over');
+                const targetRow = ev.currentTarget;
+                const srcId = ev.originalEvent.dataTransfer.getData('text/plain');
+                if (!srcId || targetRow.dataset.actorId === srcId) {
+                    this.render(); // Invalid drop, restore
+                    return;
+                }
+                // Reorder DOM
+                const srcElem = html.find(`.player-row[data-actor-id="${srcId}"]`)[0];
+                if (srcElem && targetRow) {
+                    if (srcElem !== targetRow) {
+                        if ($(targetRow).index() > $(srcElem).index()) {
+                            $(targetRow).after(srcElem);
+                        } else {
+                            $(targetRow).before(srcElem);
+                        }
+                    }
+                } else {
+                    this.render(); // Invalid drop, restore
+                }
+            });
+            html.find('.player-row .player-name').on('dragend', (ev) => {
+                html.find('.player-row .player-name').removeClass('dragging');
+                // If order is invalid, restore
+                const currentOrder = html.find('.player-row').map(function(){return this.dataset.actorId;}).get();
+                if (new Set(currentOrder).size !== currentOrder.length) {
+                    // Duplicates or missing, restore
+                    this.render();
+                }
+            });
+        }
+
         // ROLL INITIATIVE (The Fix)
         html.find('.roll-init').click(async (ev) => { 
             ev.preventDefault();
