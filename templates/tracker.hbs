@@ -2,15 +2,21 @@
     {{#if isGM}}
         <div class="gm-header">
             <div class="header-title">Nimble Tracker</div>
-            <button class="request-init icon-btn" style="width: 32px; height: 32px;" title="Request Initiative">
-                <i class="fas fa-broadcast-tower"></i>
-            </button>
+            {{#if combatActive}}
+                <button class="end-combat icon-btn" style="width: 32px; height: 32px;" title="End Combat">
+                    <i class="fas fa-stop"></i>
+                </button>
+            {{else}}
+                <button class="request-init icon-btn" style="width: 32px; height: 32px;" title="Initiative">
+                    <i class="fas fa-dice-d20"></i>
+                </button>
+            {{/if}}
         </div>
 
         {{#each players}}
             <div class="player-row modern" data-actor-id="{{this.id}}">
                 <div class="row-top">
-                    <span class="player-name">{{this.name}} <span class="readiness-tag {{this.readiness}}">[{{this.readiness}}]</span></span>
+                    <span class="player-name">{{this.name}} <span class="readiness-tag {{this.readiness}}">{{#if this.readiness}}[{{this.readiness}}]{{/if}}</span></span>
                     <button class="fill-row-pips icon-btn" style="width: 32px; height: 32px; font-size: 14px;" title="Refill Pips">
                         <i class="fas fa-sync"></i>
                     </button>
@@ -27,17 +33,21 @@
     {{else}}
         <div class="player-row modern" data-actor-id="{{player.id}}" style="border-bottom: none;">
             <div class="row-top">
-                <span class="player-name">{{player.name}} <span class="readiness-tag {{player.readiness}}">[{{player.readiness}}]</span></span>
-                <button class="roll-init icon-btn" style="width: 32px; height: 32px; font-size: 14px;" title="Roll Readiness">
-                    <i class="fas fa-dice-d20"></i>
-                </button>
+                <span class="player-name">{{player.name}} <span class="readiness-tag {{player.readiness}}">{{#if player.readiness}}[{{player.readiness}}]{{/if}}</span></span>
+                {{#unless player.readiness}}
+                    <button class="roll-init icon-btn flashy-dice" style="width: 48px; height: 48px; font-size: 24px; animation: dice-flash 1s infinite alternate; box-shadow: 0 0 16px #f1c40f; border-color: #f1c40f;" title="Roll Readiness">
+                        <i class="fas fa-dice-d20"></i>
+                    </button>
+                {{/unless}}
             </div>
             
             <div class="pip-container" id="pips-{{player.id}}" style="margin-top: 8px;">
                 <span class="loading-text">Calculating...</span>
-                {{#each player.pips}}
-                    <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
-                {{/each}}
+                {{#if player.readiness}}
+                    {{#each player.pips}}
+                        <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
+                    {{/each}}
+                {{/if}}
             </div>
         </div>
     {{/if}}

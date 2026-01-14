@@ -7,7 +7,24 @@ const TOOL_LABEL = "Toggle Nimble Action Tracker";
 const TOOL_ICON = "fas fa-dice-d20";
 
 
+
+let combatActive = false; // Module-level state for combat
+
+// Helper: Only allow players to open tracker if combatActive
+function canPlayerOpenTracker() {
+    return game.user.isGM || combatActive;
+}
+
 class NimbleActionTracker extends Application {
+    // Prevent players from opening tracker if not in combat, unless socket-triggered
+    render(force, options = {}) {
+        // Allow socket-triggered open (options.allowSocketOpen)
+        if (!game.user.isGM && !combatActive && !options.allowSocketOpen) {
+            ui.notifications.warn("You can only open the tracker during combat.");
+            return;
+        }
+        return super.render(force, options);
+    }
     constructor(options = {}) {
         super(options);
         console.log("Nimble Tracker | Application instance created.");
@@ -30,6 +47,9 @@ class NimbleActionTracker extends Application {
         console.log("Nimble Tracker | Gathering Data...");
         const isGM = game.user.isGM;
         let data = { isGM, players: [] };
+
+        // Add combatActive flag for GM
+        data.combatActive = isGM ? combatActive : undefined;
 
         if (isGM) {
             data.players = game.actors.filter(a => a.type === "character" && a.hasPlayerOwner).map(actor => {
@@ -103,10 +123,41 @@ class NimbleActionTracker extends Application {
             }
         });
 
-        // REQUEST INITIATIVE
-        html.find('.request-init').click(() => {
-            game.socket.emit("module.nimble-action-tracker", { action: "promptRoll" });
+        // REQUEST INITIATIVE (GM starts combat)
+        html.find('.request-init').click(async () => {
+            if (!game.user.isGM) return;
+            combatActive = true;
+            this.render();
+            // Set flag for all active player users to open tracker
+            const playerUsers = game.users.filter(u => !u.isGM && u.active);
+            for (const user of playerUsers) {
+                await user.setFlag("nimble-action-tracker", "showTracker", true);
+            }
             ui.notifications.info("Requested initiative from players.");
+        });
+
+        // END COMBAT (GM ends combat)
+        html.find('.end-combat').click(async () => {
+            if (!game.user.isGM) return;
+            combatActive = false;
+            this.render();
+            // Set flag for all active player users to close tracker
+            const playerUsers = game.users.filter(u => !u.isGM && u.active);
+            for (const user of playerUsers) {
+                await user.setFlag("nimble-action-tracker", "showTracker", false);
+            }
+            // Clear pips and readiness for all player actors
+            for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
+                await actor.setFlag("nimble-action-tracker", "state", {
+                    readiness: "",
+                    pips: [
+                        { type: "neutral", active: false },
+                        { type: "neutral", active: false },
+                        { type: "neutral", active: false }
+                    ]
+                });
+            }
+            ui.notifications.info("Combat ended. Player screens closed and states cleared.");
         });
 
         // REFILL ROW
@@ -183,6 +234,8 @@ class NimbleActionTracker extends Application {
 }
 
 Hooks.once('init', () => {
+    // Instantiate the tracker application so it exists for later hooks
+    trackerInstance = new NimbleActionTracker();
     // Register client setting for persistence
     game.settings.register("nimble-action-tracker", "trackerVisible", {
         scope: "client",
@@ -190,7 +243,30 @@ Hooks.once('init', () => {
         type: Boolean,
         default: false
     });
+});
 
+
+// Listen for flag changes to open/close tracker UI
+Hooks.on("updateUser", (user, changes) => {
+    if (user.id !== game.user.id) return;
+    if (hasProperty(changes, "flags.nimble-action-tracker.showTracker")) {
+        const show = getProperty(changes, "flags.nimble-action-tracker.showTracker");
+        if (show) {
+            combatActive = true;
+            if (!trackerInstance) trackerInstance = new NimbleActionTracker();
+            trackerInstance.render(true, { allowSocketOpen: true });
+            new Dialog({
+                title: "Nimble Initiative",
+                content: "GM requests Combat Readiness roll!",
+                buttons: { roll: { label: "Roll", callback: () => trackerInstance.rollCombatReadiness(game.user.character) } }
+            }).render(true);
+        } else {
+            combatActive = false;
+            if (!trackerInstance) trackerInstance = new NimbleActionTracker();
+            trackerInstance.close();
+            ui.notifications.info("Combat ended by GM. Tracker closed.");
+        }
+    }
 });
 
 // Global initialization
@@ -201,28 +277,6 @@ Hooks.once('ready', () => {
     if (shouldShow) {
         trackerInstance.render(true);
     }
-
-    console.log("[Nimble Tracker] Registering socket listener for user:", game.user.id, "isGM:", game.user.isGM);
-    game.socket.on("module.nimble-action-tracker", data => {
-        console.log("[Nimble Tracker] Socket event received:", data, "User:", game.user.id, "Character:", game.user.character);
-        if (data.action === "promptRoll") {
-            if (game.user.isGM) {
-                console.log("[Nimble Tracker] GM received promptRoll, ignoring dialog.");
-                return;
-            }
-            if (!game.user.character) {
-                ui.notifications.warn("You do not have a character assigned. Initiative roll request ignored.");
-                console.warn("[Nimble Tracker] No character assigned to user:", game.user.id);
-                return;
-            }
-            console.log("[Nimble Tracker] Showing initiative dialog to user:", game.user.id);
-            new Dialog({
-                title: "Nimble Initiative",
-                content: "GM requests Combat Readiness roll!",
-                buttons: { roll: { label: "Roll", callback: () => trackerInstance.rollCombatReadiness(game.user.character) } }
-            }).render(true);
-        }
-    });
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
@@ -285,7 +339,11 @@ Hooks.on("renderActorDirectory", (app, html) => {
     const button = $(`<button class="nimble-btn"><i class="fas fa-dice-d20"></i> Action Tracker</button>`);
     button.click(() => {
         console.log("Nimble Tracker | Manual open clicked.");
-        trackerInstance.render(true, {focus: true});
+        if (canPlayerOpenTracker()) {
+            trackerInstance.render(true, {focus: true});
+        } else {
+            ui.notifications.warn("You can only open the tracker during combat.");
+        }
     });
     $(html).find(".header-actions").append(button);
 });
