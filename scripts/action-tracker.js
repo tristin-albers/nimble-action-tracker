@@ -147,6 +147,55 @@ class NimbleActionTracker extends Application {
             await actor.setFlag("nimble-action-tracker", "state", state);
         });
 
+        // MANUAL READINESS INPUT (Player view only)
+        html.find('.manual-readiness-input').on('change', async ev => {
+            const input = ev.currentTarget;
+            let value = parseInt(input.value);
+            if (isNaN(value) || value < 1 || value > 30) {
+                ui.notifications.warn("Please enter a number between 1 and 30.");
+                input.value = '';
+                return;
+            }
+            // Set readiness for the current player
+            const actor = game.user.character;
+            if (!actor) {
+                ui.notifications.warn("No character assigned.");
+                return;
+            }
+            // Use the same calculation as a normal initiative roll, but substitute the entered value for the dice roll
+            // Find the rollCombatReadiness logic and adapt it here
+            let readiness = "";
+            let pips = [];
+            // Example logic: (replace with your actual rollCombatReadiness logic if different)
+            if (value >= 21) {
+                readiness = "Vigilant";
+                pips = [
+                    { type: "inspired", active: true },
+                    { type: "inspired", active: true },
+                    { type: "neutral", active: true }
+                ];
+            } else if (value >= 11) {
+                readiness = "Alert";
+                pips = [
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: true }
+                ];
+            } else {
+                readiness = "Hesitant";
+                pips = [
+                    { type: "bane", active: true },
+                    { type: "bane", active: true },
+                    { type: "neutral", active: true }
+                ];
+            }
+            await actor.setFlag("nimble-action-tracker", "state", {
+                readiness,
+                pips
+            });
+            this.render();
+        });
+
         // DRAG-AND-DROP PLAYER REORDER (GM only)
         if (game.user.isGM) {
             let dragSrc = null;

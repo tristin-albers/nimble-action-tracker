@@ -39,10 +39,12 @@
                 <span class="readiness-tag {{player.readiness}}">{{#if player.readiness}}[{{player.readiness}}]{{/if}}</span>
             </div>
             {{#unless player.readiness}}
-                <div style="display: flex; justify-content: center; margin-top: 8px;">
+                <div style="display: flex; flex-direction: column; align-items: center; margin-top: 8px;">
                     <button class="roll-init icon-btn flashy-dice" style="width: 48px; height: 48px; font-size: 24px; animation: dice-flash 1s infinite alternate; box-shadow: 0 0 16px #f1c40f; border-color: #f1c40f;" title="Roll Readiness">
                         <i class="fas fa-dice-d20"></i>
                     </button>
+                    <span style="margin: 8px 0 4px 0; font-weight: bold; color: #888;">OR</span>
+                    <input type="number" min="1" max="30" class="manual-readiness-input" placeholder="manual roll" style="width: 8rem; text-align: center; font-size: 1.1rem; padding: 0.25rem 0.5rem; border-radius: 0.3rem; border: 1px solid #ccc; color: #fff; background: transparent;" />
                 </div>
             {{/unless}}
             <div class="pip-container" id="pips-{{player.id}}" style="margin-top: 8px; justify-content: center;">

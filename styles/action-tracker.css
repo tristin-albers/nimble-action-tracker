@@ -1,3 +1,13 @@
+/* Manual readiness input custom styles */
+.manual-readiness-input:focus {
+    border: 1px solid #fff !important;
+    outline: none;
+    color: #fff;
+}
+.manual-readiness-input {
+    color: #fff;
+    background: transparent;
+}
 /* Readiness tag in top right for GM screen */
 .readiness-top-right {
     position: absolute;
