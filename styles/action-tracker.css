@@ -1,3 +1,12 @@
+/* Readiness tag in top right for GM screen */
+.readiness-top-right {
+    position: absolute;
+    right: 0;
+    top: 0;
+    margin-right: 0;
+    margin-top: 0;
+    z-index: 2;
+}
 /* Flashy Dice Button Animation */
 .flashy-dice {
     background: linear-gradient(90deg, #f1c40f 0%, #fff700 100%) !important;

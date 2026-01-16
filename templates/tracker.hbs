@@ -15,18 +15,20 @@
 
         {{#each players}}
             <div class="player-row modern" data-actor-id="{{this.id}}">
-                <div class="row-top">
-                    <span class="player-name">{{this.name}} <span class="readiness-tag {{this.readiness}}">{{#if this.readiness}}[{{this.readiness}}]{{/if}}</span></span>
-                    <button class="fill-row-pips icon-btn" style="width: 32px; height: 32px; font-size: 14px;" title="Refill Pips">
+                <div class="row-top" style="position: relative;">
+                    <span class="player-name">{{this.name}}</span>
+                    <span class="readiness-tag readiness-top-right {{this.readiness}}">{{#if this.readiness}}[{{this.readiness}}]{{/if}}</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;">
+                    <div class="pip-container" id="pips-{{this.id}}">
+                        <span class="loading-text">Calculating...</span>
+                        {{#each this.pips}}
+                            <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
+                        {{/each}}
+                    </div>
+                    <button class="fill-row-pips icon-btn" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Refill Pips">
                         <i class="fas fa-sync"></i>
                     </button>
-                </div>
-                {{!-- The ID here helps the JS find the right container to show the loading state --}}
-                <div class="pip-container" id="pips-{{this.id}}">
-                    <span class="loading-text">Calculating...</span>
-                    {{#each this.pips}}
-                        <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
-                    {{/each}}
                 </div>
             </div>
         {{/each}}
