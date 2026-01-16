@@ -10,19 +10,20 @@ const TOOL_ICON = "fas fa-dice-d20";
 
 let combatActive = false; // Module-level state for combat
 
-// Helper: Only allow players to open tracker if combatActive
-function canPlayerOpenTracker() {
-    return game.user.isGM || combatActive;
+// Helper: Allow players to open tracker at any time
+function canPlayerOpenTracker(options = {}) {
+    // Always allow GM
+    if (game.user.isGM) return true;
+    // Always allow socket-triggered open (for GM initiative request)
+    if (options.allowSocketOpen) return true;
+    // Always allow players to open/close their own tracker
+    return true;
 }
 
 class NimbleActionTracker extends Application {
-    // Prevent players from opening tracker if not in combat, unless socket-triggered
+    // Allow players to open/close tracker at any time, but still force open on GM request
     render(force, options = {}) {
-        // Allow socket-triggered open (options.allowSocketOpen)
-        if (!game.user.isGM && !combatActive && !options.allowSocketOpen) {
-            ui.notifications.warn("You can only open the tracker during combat.");
-            return;
-        }
+        // Only block if some future logic wants to restrict
         return super.render(force, options);
     }
     constructor(options = {}) {
@@ -395,11 +396,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
 Hooks.on("renderActorDirectory", (app, html) => {
     const button = $(`<button class="nimble-btn"><i class="fas fa-dice-d20"></i> Action Tracker</button>`);
     button.click(() => {
-        if (canPlayerOpenTracker()) {
-            trackerInstance.render(true, {focus: true});
-        } else {
-            ui.notifications.warn("You can only open the tracker during combat.");
-        }
+        trackerInstance.render(true, {focus: true});
     });
     $(html).find(".header-actions").append(button);
 });
