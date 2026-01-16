@@ -21,10 +21,45 @@ function canPlayerOpenTracker(options = {}) {
 }
 
 class NimbleActionTracker extends Application {
+    /**
+     * Save the current position to localStorage
+     */
+    savePositionToLocalStorage() {
+        try {
+            const pos = this.position;
+            if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
+                localStorage.setItem('nimble-tracker-pos', JSON.stringify({ left: pos.left, top: pos.top }));
+            }
+        } catch (e) { console.warn('Nimble Tracker: Failed to save position', e); }
+    }
+
+    /**
+     * Restore the last position from localStorage
+     */
+    restorePositionFromLocalStorage() {
+        try {
+            const raw = localStorage.getItem('nimble-tracker-pos');
+            if (raw) {
+                const pos = JSON.parse(raw);
+                if (typeof pos.left === 'number' && typeof pos.top === 'number') {
+                    this.position.left = pos.left;
+                    this.position.top = pos.top;
+                }
+            }
+        } catch (e) { console.warn('Nimble Tracker: Failed to restore position', e); }
+    }
     // Allow players to open/close tracker at any time, but still force open on GM request
     render(force, options = {}) {
         // Only block if some future logic wants to restrict
-        return super.render(force, options);
+        const rendered = super.render(force, options);
+        // After rendering, restore position
+        setTimeout(() => {
+            this.restorePositionFromLocalStorage();
+            if (this.position.left !== undefined && this.position.top !== undefined) {
+                this.setPosition({ left: this.position.left, top: this.position.top });
+            }
+        }, 0);
+        return rendered;
     }
     constructor(options = {}) {
         super(options);
@@ -87,6 +122,9 @@ class NimbleActionTracker extends Application {
 
     activateListeners(html) {
         super.activateListeners(html);
+        // Save position on close or drag
+        this.element.on('dragstop', () => this.savePositionToLocalStorage());
+        this.element.on('close', () => this.savePositionToLocalStorage());
 
         // PIP CLICKS
         html.find('.pip').click(async ev => {
@@ -234,6 +272,8 @@ class NimbleActionTracker extends Application {
             const playerRow = html.find('.player-row .row-top')[0];
             if (playerRow) new Draggable(this, html, playerRow, false);
         }
+        // Save position after drag
+        this.element.on('dragstop', () => this.savePositionToLocalStorage());
     }
 
    async rollCombatReadiness(actor) {
@@ -322,6 +362,7 @@ Hooks.on("updateUser", (user, changes) => {
         } else {
             combatActive = false;
             if (!trackerInstance) trackerInstance = new NimbleActionTracker();
+            trackerInstance.savePositionToLocalStorage();
             trackerInstance.close();
         }
     }
