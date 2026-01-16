@@ -348,15 +348,15 @@ export class NimbleActionTracker extends Application {
         // 4. Perform the Roll
         const dex = actor.system.abilities?.dexterity?.baseValue ?? 0;
         const roll = await new Roll(`1d20 + ${dex}`).evaluate();
-        
-        // 5. Blizzard-style Delay (1.2 seconds)
-        await new Promise(resolve => setTimeout(resolve, 1200));
 
-        // 6. Post to Chat
+        // 5. Post to Chat and wait for it to be visible
         await roll.toMessage({ 
             flavor: `Initiative`,
             speaker: ChatMessage.getSpeaker({ actor })
         });
+
+        // 6. Blizzard-style Delay (1.2 seconds) AFTER chat message
+        await new Promise(resolve => setTimeout(resolve, 3600));
 
         // 7. Calculate and Set Result
         let result = roll.total;
@@ -371,7 +371,7 @@ export class NimbleActionTracker extends Application {
         }
 
         await actor.setFlag("nimble-action-tracker", "state", newState);
-        
+
         // UI resets automatically on re-render, but for safety:
         if (pipContainer) pipContainer.classList.remove('is-loading');
     }
