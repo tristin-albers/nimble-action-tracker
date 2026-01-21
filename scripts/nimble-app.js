@@ -303,7 +303,14 @@ export class NimbleActionTracker extends Application {
             const actorId = ev.currentTarget.closest('.player-row').dataset.actorId;
             const actor = game.actors.get(actorId);
             let state = JSON.parse(JSON.stringify(this._getActorTrackerData(actor)));
-            state.pips = state.pips.map(p => ({ type: "neutral", active: true }));
+            // Only preserve active inspired/bane pips, all others become neutral and active
+            state.pips = state.pips.map(p => {
+                if (p && p.active && (p.type === "inspired" || p.type === "bane")) {
+                    return p;
+                }
+                // Fill all other pips (inactive or not inspired/bane) as neutral and active
+                return { type: "neutral", active: true };
+            });
             state.readiness = "";
             await actor.setFlag("nimble-action-tracker", "state", state);
         });
