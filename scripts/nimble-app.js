@@ -354,10 +354,11 @@ export class NimbleActionTracker extends Application {
             d.render(true);
         });
 
-        // Refill row pips
+        // Refill row pips (no readiness prompt)
         html.find('.fill-row-pips').click(async ev => {
             const actorId = ev.currentTarget.closest('.player-row').dataset.actorId;
             const actor = game.actors.get(actorId);
+            if (!actor) return;
             let state = JSON.parse(JSON.stringify(this._getActorTrackerData(actor)));
             // Only preserve active inspired/bane pips, all others become neutral and active
             state.pips = state.pips.map(p => {
@@ -367,7 +368,7 @@ export class NimbleActionTracker extends Application {
                 // Fill all other pips (inactive or not inspired/bane) as neutral and active
                 return { type: "neutral", active: true };
             });
-            state.readiness = "";
+            // Do NOT clear readiness or prompt for roll
             await actor.setFlag("nimble-action-tracker", "state", state);
         });
 
