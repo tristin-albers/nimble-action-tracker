@@ -4,9 +4,7 @@ export class NimbleActionTracker extends Application {
     setCombatActive(active) {
         this.combatActive = active;
     }
-    /**
-     * Save the current position to localStorage
-     */
+    // Save the current position to localStorage
     savePositionToLocalStorage() {
         try {
             const pos = this.position;
@@ -16,9 +14,7 @@ export class NimbleActionTracker extends Application {
         } catch (e) { console.warn('Nimble Tracker: Failed to save position', e); }
     }
 
-    /**
-     * Restore the last position from localStorage
-     */
+    // Restore the last position from localStorage
     restorePositionFromLocalStorage() {
         try {
             const raw = localStorage.getItem('nimble-tracker-pos');
@@ -31,7 +27,7 @@ export class NimbleActionTracker extends Application {
             }
         } catch (e) { console.warn('Nimble Tracker: Failed to restore position', e); }
     }
-    // Allow players to open/close tracker at any time, but still force open on GM request
+    // Tracker can be opened/closed by players at any time; GM can force open
     render(force, options = {}) {
         // Only block if some future logic wants to restrict
         const rendered = super.render(force, options);
@@ -61,8 +57,8 @@ export class NimbleActionTracker extends Application {
             width: 300,
             height: "auto",
             classes: ["nimble-tracker-fancy"], // Custom class for styling
-            resizable: false,                  // No resizing
-            minimizable: false                 // No minimizing
+            resizable: false,
+            minimizable: false
         });
     }
 
@@ -140,7 +136,7 @@ export class NimbleActionTracker extends Application {
             await actor.setFlag("nimble-action-tracker", "state", state);
         });
 
-        // MANUAL READINESS INPUT (Player view only)
+        // Manual readiness input (Player view only)
         html.find('.manual-readiness-input').on('change', async ev => {
             const input = ev.currentTarget;
             let value = parseInt(input.value);
@@ -155,11 +151,8 @@ export class NimbleActionTracker extends Application {
                 ui.notifications.warn("No character assigned.");
                 return;
             }
-            // Use the same calculation as a normal initiative roll, but substitute the entered value for the dice roll
-            // Find the rollCombatReadiness logic and adapt it here
             let readiness = "";
             let pips = [];
-            // Example logic: (replace with your actual rollCombatReadiness logic if different)
             if (value >= 21) {
                 readiness = "Vigilant";
                 pips = [
@@ -189,7 +182,7 @@ export class NimbleActionTracker extends Application {
             this.render();
         });
 
-        // DRAG-AND-DROP PLAYER REORDER (GM only)
+        // Drag-and-drop player reorder (GM only)
         if (game.user.isGM) {
             let dragSrc = null;
             let originalOrder = [];
@@ -246,7 +239,7 @@ export class NimbleActionTracker extends Application {
             });
         }
 
-        // ROLL INITIATIVE (The Fix)
+        // Roll initiative
         html.find('.roll-init').click(async (ev) => { 
             ev.preventDefault();
             // Look for ID in the row, otherwise fallback to the user's character
@@ -261,7 +254,7 @@ export class NimbleActionTracker extends Application {
             }
         });
 
-        // REQUEST INITIATIVE (GM starts combat)
+        // Request initiative (GM starts combat)
         html.find('.request-init').click(async () => {
             if (!game.user.isGM) return;
             this.combatActive = true;
@@ -273,7 +266,7 @@ export class NimbleActionTracker extends Application {
             }
         });
 
-        // END COMBAT (GM ends combat)
+        // End combat (GM ends combat)
         html.find('.end-combat').click(async () => {
             if (!game.user.isGM) return;
             this.combatActive = false;
@@ -298,7 +291,7 @@ export class NimbleActionTracker extends Application {
             await this.resetAllTokenRings();
         });
 
-        // REFILL ROW
+        // Refill row pips
         html.find('.fill-row-pips').click(async ev => {
             const actorId = ev.currentTarget.closest('.player-row').dataset.actorId;
             const actor = game.actors.get(actorId);
@@ -327,12 +320,13 @@ export class NimbleActionTracker extends Application {
         this.element.on('dragstop', () => this.savePositionToLocalStorage());
     }
 
-   async rollCombatReadiness(actor) {
+    // Roll combat readiness for an actor
+    async rollCombatReadiness(actor) {
         const row = document.querySelector(`[data-actor-id="${actor.id}"]`);
         const pipContainer = row?.querySelector('.pip-container');
         const loadingText = row?.querySelector('.loading-text');
 
-        // 1. Map classes to witty phrases
+        // Map classes to witty phrases
         const classPhrases = {
             "Berserker": "Feeding inner fire...",
             "Cheat": "Stacking the deck...",
@@ -348,29 +342,29 @@ export class NimbleActionTracker extends Application {
             "Hexbinder": "Consulting with omens..."
         };
 
-        // 2. Identify Actor's Class (Assuming Nimble v2 data structure)
+        // Identify actor's class
         // Most systems store class name in actor.item types or a specific system field
         const actorClass = actor.items.find(i => i.type === "class")?.name || "Hero";
         const phrase = classPhrases[actorClass] || "Preparing for glory...";
 
-        // 3. Update UI and Start Loading
+        // Update UI and start loading
         if (loadingText) loadingText.innerText = phrase;
         if (pipContainer) pipContainer.classList.add('is-loading');
 
-        // 4. Perform the Roll
+        // Perform the roll
         const dex = actor.system.abilities?.dexterity?.baseValue ?? 0;
         const roll = await new Roll(`1d20 + ${dex}`).evaluate();
 
-        // 5. Post to Chat and wait for it to be visible
+        // Post to chat
         await roll.toMessage({ 
             flavor: `Initiative`,
             speaker: ChatMessage.getSpeaker({ actor })
         });
 
-        // 6. Blizzard-style Delay (1.2 seconds) AFTER chat message
+        // Delay after chat message
         await new Promise(resolve => setTimeout(resolve, 3600));
 
-        // 7. Calculate and Set Result
+        // Calculate and set result
         let result = roll.total;
         let newState = { readiness: "", pips: [] };
 
@@ -384,14 +378,11 @@ export class NimbleActionTracker extends Application {
 
         await actor.setFlag("nimble-action-tracker", "state", newState);
 
-        // UI resets automatically on re-render, but for safety:
+        // UI resets automatically on re-render
         if (pipContainer) pipContainer.classList.remove('is-loading');
     }
 
-     /**
-     * Color and ping all non-hidden tokens in the scene based on disposition.
-     * Player tokens get neon green, others get disposition color. Also sets a flag.
-     */
+    // Color and ping all non-hidden tokens in the scene based on disposition
     async colorAndPingTokensForNewRound() {
         const effectName = "Turn Taken";
         const bluePing = "#00BFFF";
@@ -416,9 +407,7 @@ export class NimbleActionTracker extends Application {
         }
     }
 
-    /**
-     * Reset all non-hidden tokens in the scene to default ring state and clear flag.
-     */
+    // Reset all non-hidden tokens in the scene to default ring state and clear flag
     async resetAllTokenRings() {
         for (let token of canvas.tokens.placeables) {
             if (token.document.hidden) continue;
