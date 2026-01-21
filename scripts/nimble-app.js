@@ -126,13 +126,6 @@ export class NimbleActionTracker extends Application {
     }
 
     activateListeners(html) {
-                // Listener for NPC toggle turn button
-                html.find('.toggle-npc-ring').click(async ev => {
-                    const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
-                    const token = canvas.tokens.placeables.find(t => t.id === tokenId);
-                    if (!token) return;
-                    await this.ToggleTokenRing(token);
-                });
         super.activateListeners(html);
         // Save position on close or drag
         this.element.on('dragstop', () => this.savePositionToLocalStorage());
@@ -385,6 +378,43 @@ export class NimbleActionTracker extends Application {
             });
             // Do NOT clear readiness or prompt for roll
             await actor.setFlag("nimble-action-tracker", "state", state);
+        });
+
+        // Hover effect for player and NPC names
+        // Player names
+        html.find('.player-name').on('mouseenter', function(ev) {
+            const actorId = $(this).closest('.player-row').data('actorId');
+            if (!actorId || actorId === "none") return;
+            const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
+            if (token) token._onHoverIn({});
+        });
+        html.find('.player-name').on('mouseleave', function(ev) {
+            const actorId = $(this).closest('.player-row').data('actorId');
+            if (!actorId || actorId === "none") return;
+            const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
+            if (token) token._onHoverOut({});
+        });
+
+        // NPC names
+        html.find('.npc-name').on('mouseenter', function(ev) {
+            const tokenId = $(this).closest('.npc-row').data('tokenId');
+            if (!tokenId) return;
+            const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+            if (token) token._onHoverIn({});
+        });
+        html.find('.npc-name').on('mouseleave', function(ev) {
+            const tokenId = $(this).closest('.npc-row').data('tokenId');
+            if (!tokenId) return;
+            const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+            if (token) token._onHoverOut({});
+        });
+
+        // Listener for NPC toggle turn button
+        html.find('.toggle-npc-ring').click(async ev => {
+            const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
+            const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+            if (!token) return;
+            await this.ToggleTokenRing(token);
         });
 
         // Make only the GM header or player name row draggable
