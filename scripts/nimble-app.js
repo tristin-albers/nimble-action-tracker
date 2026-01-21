@@ -113,6 +113,12 @@ export class NimbleActionTracker extends Application {
         this.element.on('dragstop', () => this.savePositionToLocalStorage());
         this.element.on('close', () => this.savePositionToLocalStorage());
 
+        // NEW ROUND BUTTON (GM only)
+        html.find('.new-round').click(async () => {
+            if (!game.user.isGM) return;
+            await this.colorAndPingTokensForNewRound();
+        });
+
         // PIP CLICKS
         html.find('.pip').click(async ev => {
             const row = ev.currentTarget.closest('.player-row');
@@ -288,6 +294,8 @@ export class NimbleActionTracker extends Application {
                     ]
                 });
             }
+            // Reset all token rings and flags
+            await this.resetAllTokenRings();
         });
 
         // REFILL ROW
@@ -371,5 +379,47 @@ export class NimbleActionTracker extends Application {
 
         // UI resets automatically on re-render, but for safety:
         if (pipContainer) pipContainer.classList.remove('is-loading');
+    }
+
+     /**
+     * Color and ping all non-hidden tokens in the scene based on disposition.
+     * Player tokens get neon green, others get disposition color. Also sets a flag.
+     */
+    async colorAndPingTokensForNewRound() {
+        const effectName = "Turn Taken";
+        const bluePing = "#00BFFF";
+        const brightGreen = "#00ff73";
+        for (let token of canvas.tokens.placeables) {
+            if (token.document.hidden) continue;
+            let ringColor;
+            if (token.actor?.type === "character" && token.actor?.hasPlayerOwner) {
+                ringColor = brightGreen;
+            } else {
+                const disp = token.document.disposition;
+                const dispKey = Object.keys(CONST.TOKEN_DISPOSITIONS).find(k => CONST.TOKEN_DISPOSITIONS[k] === disp);
+                ringColor = "#" + CONFIG.Canvas.dispositionColors[dispKey].toString(16).padStart(6, '0');
+            }
+            canvas.ping(token.center, {color: bluePing, style: "pulse"});
+            await token.document.update({
+                "ring.colors.ring": ringColor,
+                "ring.effects": 2,
+                "ring.enabled": true,
+                "flags.world.zipperFinished": true
+            });
+        }
+    }
+
+    /**
+     * Reset all non-hidden tokens in the scene to default ring state and clear flag.
+     */
+    async resetAllTokenRings() {
+        for (let token of canvas.tokens.placeables) {
+            if (token.document.hidden) continue;
+            await token.document.update({ 
+                "ring.colors.ring": null,
+                "ring.effects": 0,
+                "flags.world.zipperFinished": false
+            });
+        }
     }
 }
