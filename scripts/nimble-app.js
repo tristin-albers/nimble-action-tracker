@@ -249,6 +249,10 @@ export class NimbleActionTracker extends Application {
 
             if (actor) {
                 await this.rollCombatReadiness(actor);
+                // If GM triggers, also highlight token rings
+                if (game.user.isGM) {
+                    await this.colorAndPingTokensForNewRound();
+                }
             } else {
                 ui.notifications.warn("No character found to roll for.");
             }
@@ -264,6 +268,8 @@ export class NimbleActionTracker extends Application {
             for (const user of playerUsers) {
                 await user.setFlag("nimble-action-tracker", "showTracker", true);
             }
+            // Also highlight token rings for new round
+            await this.colorAndPingTokensForNewRound();
         });
 
         // End combat (GM ends combat)
@@ -389,6 +395,12 @@ export class NimbleActionTracker extends Application {
         const brightGreen = "#00ff73";
         for (let token of canvas.tokens.placeables) {
             if (token.document.hidden) continue;
+            // Ignore tokens with the "Dead" status effect
+            const hasDeadEffect = token.actor?.effects?.some(e => {
+                // Foundry v12: status effects have statuses and/or flags
+                return e.statuses?.includes("dead") || e.getFlag("core", "statusId") === "dead" || e.label?.toLowerCase() === "dead";
+            });
+            if (hasDeadEffect) continue;
             let ringColor;
             if (token.actor?.type === "character" && token.actor?.hasPlayerOwner) {
                 ringColor = brightGreen;
