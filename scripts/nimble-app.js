@@ -126,13 +126,6 @@ export class NimbleActionTracker extends Application {
     }
 
     activateListeners(html) {
-                // Listener for NPC toggle turn button
-                html.find('.toggle-npc-ring').click(async ev => {
-                    const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
-                    const token = canvas.tokens.placeables.find(t => t.id === tokenId);
-                    if (!token) return;
-                    await this.ToggleTokenRing(token);
-                });
         super.activateListeners(html);
         // Save position on close or drag
         this.element.on('dragstop', () => this.savePositionToLocalStorage());
@@ -327,11 +320,11 @@ export class NimbleActionTracker extends Application {
                 content: `<div style='padding:1em;text-align:center;'>
                     <div style='font-size:1.2em;margin-bottom:1em;'>Are you sure you want to end combat?</div>
                     <div style='display:flex;justify-content:center;gap:16px;'>
-                        <button class='end-combat-confirm' style='background:#2ecc40;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #2ecc40;cursor:pointer;'>
-                            <i class='fas fa-check'></i>
-                        </button>
                         <button class='end-combat-cancel' style='background:#ff2a2a;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #ff2a2a;cursor:pointer;'>
                             <i class='fas fa-times'></i>
+                        </button>
+                         <button class='end-combat-confirm' style='background:#2ecc40;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #2ecc40;cursor:pointer;'>
+                            <i class='fas fa-check'></i>
                         </button>
                     </div>
                 </div>`,
@@ -416,6 +409,42 @@ export class NimbleActionTracker extends Application {
             if (token) token._onHoverOut({});
         });
 
+        // Listener for NPC toggle turn button
+        html.find('.toggle-npc-ring').click(async ev => {
+            const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
+            const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+            if (!token) return;
+            await this.ToggleTokenRing(token);
+        });
+
+        // Toggle death state for player and NPC tokens
+        html.find('.toggle-dead-state').click(async ev => {
+            let token;
+            // Try player row first
+            let row = ev.currentTarget.closest('.player-row');
+            if (row && row.dataset.actorId) {
+                token = canvas.tokens.placeables.find(t => t.actor?.id === row.dataset.actorId);
+            } else {
+                // Try NPC row
+                row = ev.currentTarget.closest('.npc-row');
+                if (row && row.dataset.tokenId) {
+                    token = canvas.tokens.placeables.find(t => t.id === row.dataset.tokenId);
+                }
+            }
+            if (!token) {
+                ui.notifications.warn("No token found for this row.");
+                return;
+            }
+            // Check if the token already has the 'dead' status
+            const isDead = token.actor?.effects?.some(e => e.statuses?.has?.("dead") || e.statuses?.includes?.("dead"));
+            // Toggle the core 'dead' status effect as an overlay
+            await token.actor.toggleStatusEffect("dead", {overlay: true, active: !isDead});
+            // Update the token's opacity
+            await token.document.update({
+                alpha: isDead ? 1.0 : 0.5
+            });
+        });
+        
         // Listener for NPC toggle turn button
         html.find('.toggle-npc-ring').click(async ev => {
             const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
