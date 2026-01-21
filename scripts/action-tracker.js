@@ -76,14 +76,24 @@ Hooks.on("getSceneControlButtons", (controls) => {
             
         if (exists) return true;
 
-        // Define the tool based on your toggle needs
-        const tool = { 
-            name: TOOL_KEY, 
-            title: TOOL_LABEL, 
-            icon: TOOL_ICON, 
+        // Debounce utility (if not already defined)
+        if (typeof window.nimbleDebounce !== 'function') {
+            window.nimbleDebounce = function(func, wait) {
+                let timeout;
+                return function(...args) {
+                    if (timeout) clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            };
+        }
+
+        const tool = {
+            name: TOOL_KEY,
+            title: TOOL_LABEL,
+            icon: TOOL_ICON,
             toggle: true, // This makes the button stay highlighted when active
             active: game.settings.get("nimble-action-tracker", "trackerVisible"),
-            onClick: (active) => {
+            onClick: window.nimbleDebounce((active) => {
                 game.settings.set("nimble-action-tracker", "trackerVisible", active);
                 if (active) {
                     trackerInstance.render(true);
@@ -98,7 +108,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
                         trackerInstance.close();
                     }
                 }
-            }
+            }, 300)
         };
 
         if (Array.isArray(tools)) {
@@ -120,11 +130,22 @@ Hooks.on("getSceneControlButtons", (controls) => {
 });
 
 // Sidebar Button with explicit jQuery wrapping
+
+// Debounce utility
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
 Hooks.on("renderActorDirectory", (app, html) => {
     const button = $(`<button class="nimble-btn"><i class="fas fa-dice-d20"></i> Action Tracker</button>`);
-    button.click(() => {
+    // Debounce the click to prevent rapid double opens
+    button.click(debounce(() => {
         trackerInstance.render(true, {focus: true});
-    });
+    }, 300));
     $(html).find(".header-actions").append(button);
 });
 

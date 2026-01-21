@@ -1,6 +1,3 @@
-// Main NimbleActionTracker application class
-// Exports: NimbleActionTracker
-
 export class NimbleActionTracker extends Application {
     combatActive = false;
 
