@@ -1,3 +1,27 @@
+/* NPC Row Styling to match Player Row */
+.npc-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    min-height: 40px;
+    gap: 8px;
+}
+
+.npc-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #e2e8f0;
+    margin-right: 12px;
+}
+
+.toggle-npc-ring.icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+    align-self: center;
+}
 /* Red glow on hover for end-combat button */
 .end-combat-glow:hover {
     box-shadow: 0 0 12px 4px #ff2a2a;
@@ -171,8 +195,8 @@
     text-shadow: 0 0 8px rgba(255, 177, 0, 0.4);
 }
 
-/* Alert - Muted Common White */
-.readiness-tag.Alert {
+/* Ready - Muted Common White */
+.readiness-tag.Ready {
     color: #a3a3a3; /* Muted gray-white */
     text-shadow: none;
     font-weight: 500; /* Slightly less "bold" feel for common status */
@@ -190,7 +214,7 @@
     visibility: hidden;
 }
 
-.readiness-tag:not(.Vigilant):not(.Alert):not(.Hesitant) {
+.readiness-tag:not(.Vigilant):not(.Ready):not(.Hesitant) {
     color: #8a92a7; /* Neutral slate */
 }
 
