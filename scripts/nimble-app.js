@@ -126,6 +126,13 @@ export class NimbleActionTracker extends Application {
     }
 
     activateListeners(html) {
+                // Listener for NPC toggle turn button
+                html.find('.toggle-npc-ring').click(async ev => {
+                    const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
+                    const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+                    if (!token) return;
+                    await this.ToggleTokenRing(token);
+                });
         super.activateListeners(html);
         // Save position on close or drag
         this.element.on('dragstop', () => this.savePositionToLocalStorage());
