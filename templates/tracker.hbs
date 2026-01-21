@@ -7,7 +7,7 @@
                     <i class="fas fa-stop"></i>
                 </button>
                 <button class="new-round icon-btn" style="width: 32px; height: 32px; margin-left: 8px;" title="New Round">
-                    <i class="fas fa-sync-alt"></i>
+                    <i class="fas fa-fast-forward"></i>
                 </button>
             {{else}}
                 <button class="request-init icon-btn" style="width: 32px; height: 32px;" title="Initiative">
@@ -29,12 +29,14 @@
                             <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
                         {{/each}}
                     </div>
-                    <button class="toggle-token-ring icon-btn" style="width: 32px; height: 32px; font-size: 14px; align-self: center; margin-right: 4px;" title="Toggle Turn">
-                        <i class="fas fa-circle"></i>
-                    </button>
-                    <button class="fill-row-pips icon-btn" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Refill Pips">
-                        <i class="fas fa-sync"></i>
-                    </button>
+                    <span style="display: flex; gap: 4px; align-items: center;">
+                        <button class="toggle-token-ring icon-btn" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Toggle Turn">
+                            <i class="fas fa-circle"></i>
+                        </button>
+                        <button class="fill-row-pips icon-btn" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Refill Pips">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                    </span>
                 </div>
             </div>
         {{/each}}
