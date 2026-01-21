@@ -303,29 +303,55 @@ export class NimbleActionTracker extends Application {
             await this.colorAndPingTokensForNewRound();
         });
 
-        // End combat (GM ends combat)
+        // End combat (GM ends combat) with confirmation dialog
         html.find('.end-combat').click(async () => {
             if (!game.user.isGM) return;
-            this.combatActive = false;
-            this.render();
-            // Set flag for all active player users to close tracker
-            const playerUsers = game.users.filter(u => !u.isGM && u.active);
-            for (const user of playerUsers) {
-                await user.setFlag("nimble-action-tracker", "showTracker", false);
-            }
-            // Clear pips and readiness for all player actors
-            for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
-                await actor.setFlag("nimble-action-tracker", "state", {
-                    readiness: "",
-                    pips: [
-                        { type: "neutral", active: false },
-                        { type: "neutral", active: false },
-                        { type: "neutral", active: false }
-                    ]
-                });
-            }
-            // Reset all token rings and flags
-            await this.resetAllTokenRings();
+            // Show confirmation dialog
+            const d = new Dialog({
+                title: "End Combat?",
+                content: `<div style='padding:1em;text-align:center;'>
+                    <div style='font-size:1.2em;margin-bottom:1em;'>Are you sure you want to end combat?</div>
+                    <div style='display:flex;justify-content:center;gap:16px;'>
+                        <button class='end-combat-confirm' style='background:#2ecc40;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #2ecc40;cursor:pointer;'>
+                            <i class='fas fa-check'></i>
+                        </button>
+                        <button class='end-combat-cancel' style='background:#ff2a2a;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #ff2a2a;cursor:pointer;'>
+                            <i class='fas fa-times'></i>
+                        </button>
+                    </div>
+                </div>`,
+                buttons: {}, // We'll handle buttons manually
+                render: html => {
+                    html.find('.end-combat-confirm').click(async () => {
+                        d.close();
+                        // Proceed with end combat logic
+                        this.combatActive = false;
+                        this.render();
+                        // Set flag for all active player users to close tracker
+                        const playerUsers = game.users.filter(u => !u.isGM && u.active);
+                        for (const user of playerUsers) {
+                            await user.setFlag("nimble-action-tracker", "showTracker", false);
+                        }
+                        // Clear pips and readiness for all player actors
+                        for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
+                            await actor.setFlag("nimble-action-tracker", "state", {
+                                readiness: "",
+                                pips: [
+                                    { type: "neutral", active: false },
+                                    { type: "neutral", active: false },
+                                    { type: "neutral", active: false }
+                                ]
+                            });
+                        }
+                        // Reset all token rings and flags
+                        await this.resetAllTokenRings();
+                    });
+                    html.find('.end-combat-cancel').click(() => {
+                        d.close();
+                    });
+                }
+            });
+            d.render(true);
         });
 
         // Refill row pips

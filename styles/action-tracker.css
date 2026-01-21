@@ -1,3 +1,10 @@
+/* Red glow on hover for end-combat button */
+.end-combat-glow:hover {
+    box-shadow: 0 0 12px 4px #ff2a2a;
+    border-color: #ff2a2a;
+    background: #2a0000;
+    color: #fff;
+}
 /* Manual readiness input custom styles */
 .manual-readiness-input:focus {
     border: 1px solid #fff !important;
