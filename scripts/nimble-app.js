@@ -65,7 +65,7 @@ export class NimbleActionTracker extends Application {
     getData() {
         console.log("Nimble Tracker | Gathering Data...");
         const isGM = game.user.isGM;
-        let data = { isGM, players: [] };
+        let data = { isGM, players: [], npcs: [] };
 
         // Add combatActive flag for GM
         data.combatActive = isGM ? this.combatActive : undefined;
@@ -92,6 +92,14 @@ export class NimbleActionTracker extends Application {
                     ...this._getActorTrackerData(actor)
                 };
             });
+
+            // Add NPC tokens (non-hidden, non-character, not owned by player)
+            data.npcs = canvas.tokens.placeables
+                .filter(t => !t.document.hidden && t.actor?.type !== "character" && !t.actor?.hasPlayerOwner)
+                .map(t => ({
+                    tokenId: t.id,
+                    name: t.name || t.actor?.name || "Unknown"
+                }));
         } else {
             const actor = game.user.character;
             data.player = {
@@ -118,6 +126,13 @@ export class NimbleActionTracker extends Application {
     }
 
     activateListeners(html) {
+                // Listener for NPC toggle turn button
+                html.find('.toggle-npc-ring').click(async ev => {
+                    const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
+                    const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+                    if (!token) return;
+                    await this.ToggleTokenRing(token);
+                });
         super.activateListeners(html);
         // Save position on close or drag
         this.element.on('dragstop', () => this.savePositionToLocalStorage());
@@ -186,7 +201,7 @@ export class NimbleActionTracker extends Application {
                     { type: "neutral", active: true }
                 ];
             } else if (value >= 11) {
-                readiness = "Alert";
+                readiness = "Ready";
                 pips = [
                     { type: "neutral", active: true },
                     { type: "neutral", active: true },
@@ -481,7 +496,7 @@ export class NimbleActionTracker extends Application {
         if (result >= 20) {
             newState = { readiness: "Vigilant", pips: [{type: "inspired", active: true}, {type: "inspired", active: true}, {type: "neutral", active: true}] };
         } else if (result >= 10) {
-            newState = { readiness: "Alert", pips: [{type: "neutral", active: true}, {type: "neutral", active: true}, {type: "neutral", active: true}] };
+            newState = { readiness: "Ready", pips: [{type: "neutral", active: true}, {type: "neutral", active: true}, {type: "neutral", active: true}] };
         } else {
             newState = { readiness: "Hesitant", pips: [{type: "bane", active: true}, {type: "bane", active: true}, {type: "neutral", active: true}] };
         }

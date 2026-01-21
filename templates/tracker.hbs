@@ -40,6 +40,19 @@
                 </div>
             </div>
         {{/each}}
+
+        <hr style="border: none; border-top: 2px solid #444; margin: 12px 0;" />
+
+        <div class="npc-row-list" style="display: flex; flex-direction: column; gap: 8px;">
+            {{#each npcs}}
+                <div class="npc-row" data-token-id="{{this.tokenId}}">
+                    <span class="npc-name">{{this.name}}</span>
+                    <button class="toggle-npc-ring icon-btn" title="Toggle Turn">
+                        <i class="fas fa-circle"></i>
+                    </button>
+                </div>
+            {{/each}}
+        </div>
     {{else}}
         <div class="player-row modern" data-actor-id="{{player.id}}" style="border-bottom: none;">
             <div class="row-top" style="display: flex; justify-content: space-between; align-items: center;">
