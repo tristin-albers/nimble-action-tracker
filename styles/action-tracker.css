@@ -40,7 +40,7 @@
 /* 1. Main Application Container */
 #nimble-action-tracker {
     height: auto !important;
-    width: 15rem !important;
+    width: 18rem !important;
     filter: drop-shadow(0 8px 16px rgba(0,0,0,0.6));
     z-index: 60;
 }

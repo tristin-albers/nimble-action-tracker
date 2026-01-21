@@ -122,13 +122,24 @@ export class NimbleActionTracker extends Application {
         // Save position on close or drag
         this.element.on('dragstop', () => this.savePositionToLocalStorage());
         this.element.on('close', () => this.savePositionToLocalStorage());
-
+        
         // NEW ROUND BUTTON (GM only)
         html.find('.new-round').click(async () => {
             if (!game.user.isGM) return;
             await this.colorAndPingTokensForNewRound();
         });
 
+        // Add listener for the new toggle-token-ring button
+        html.find('.toggle-token-ring').click(async ev => {
+            const actorId = ev.currentTarget.closest('.player-row').dataset.actorId;
+            const actor = game.actors.get(actorId);
+            if (!actor) return;
+            // Find the token for this actor in the current scene
+            const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
+            if (!token) return;
+            await this.ToggleTokenRing(token);
+        });
+        
         // PIP CLICKS
         html.find('.pip').click(async ev => {
             const row = ev.currentTarget.closest('.player-row');
@@ -344,6 +355,52 @@ export class NimbleActionTracker extends Application {
         }
         // Save position after drag
         this.element.on('dragstop', () => this.savePositionToLocalStorage());
+    }
+
+    // Toggle the token ring for an individual token
+    async ToggleTokenRing(token) {
+        if (!token || token.document.hidden) return;
+        const current = token.document.ring?.colors?.ring;
+        if (current == null) {
+            await this.colorAndPingTokenForNewRound(token);
+        } else {
+            await this.resetTokenRing(token);
+        }
+    }
+
+    // Color and ping a single token as in colorAndPingTokensForNewRound
+    async colorAndPingTokenForNewRound(token) {
+        // Ignore tokens with the "Dead" status effect
+        const hasDeadEffect = token.actor?.effects?.some(e => {
+            return e.statuses?.includes("dead") || e.getFlag("core", "statusId") === "dead" || e.label?.toLowerCase() === "dead";
+        });
+        if (hasDeadEffect) return;
+        const brightGreen = "#00ff73";
+        const bluePing = "#00BFFF";
+        let ringColor;
+        if (token.actor?.type === "character" && token.actor?.hasPlayerOwner) {
+            ringColor = brightGreen;
+        } else {
+            const disp = token.document.disposition;
+            const dispKey = Object.keys(CONST.TOKEN_DISPOSITIONS).find(k => CONST.TOKEN_DISPOSITIONS[k] === disp);
+            ringColor = "#" + CONFIG.Canvas.dispositionColors[dispKey].toString(16).padStart(6, '0');
+        }
+        canvas.ping(token.center, {color: bluePing, style: "pulse"});
+        await token.document.update({
+            "ring.colors.ring": ringColor,
+            "ring.effects": 2,
+            "ring.enabled": true,
+            "flags.world.zipperFinished": true
+        });
+    }
+
+    // Reset a single token's ring as in resetAllTokenRings
+    async resetTokenRing(token) {
+        await token.document.update({
+            "ring.colors.ring": null,
+            "ring.effects": 0,
+            "flags.world.zipperFinished": false
+        });
     }
 
     // Roll combat readiness for an actor
