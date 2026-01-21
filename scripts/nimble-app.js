@@ -70,8 +70,22 @@ export class NimbleActionTracker extends Application {
         // Add combatActive flag for GM
         data.combatActive = isGM ? this.combatActive : undefined;
 
+        // Restore saved order for GM
+        let orderedActors;
         if (isGM) {
-            data.players = game.actors.filter(a => a.type === "character" && a.hasPlayerOwner).map(actor => {
+            const scene = game.scenes?.active;
+            const savedOrder = scene?.getFlag("nimble-action-tracker", "playerOrder");
+            const allActors = game.actors.filter(a => a.type === "character" && a.hasPlayerOwner);
+            if (Array.isArray(savedOrder) && savedOrder.length) {
+                // Order actors by saved order, then append any missing
+                orderedActors = savedOrder.map(id => allActors.find(a => a.id === id)).filter(Boolean);
+                // Add any actors not in savedOrder
+                const missing = allActors.filter(a => !savedOrder.includes(a.id));
+                orderedActors = orderedActors.concat(missing);
+            } else {
+                orderedActors = allActors;
+            }
+            data.players = orderedActors.map(actor => {
                 return {
                     id: actor.id,
                     name: actor.name,
@@ -205,7 +219,7 @@ export class NimbleActionTracker extends Application {
             html.find('.player-row').on('dragleave', function(ev) {
                 $(this).removeClass('drag-over');
             });
-            html.find('.player-row').on('drop', (ev) => {
+            html.find('.player-row').on('drop', async (ev) => {
                 ev.preventDefault();
                 html.find('.player-row').removeClass('drag-over');
                 const targetRow = ev.currentTarget;
@@ -223,6 +237,12 @@ export class NimbleActionTracker extends Application {
                         } else {
                             $(targetRow).before(srcElem);
                         }
+                    }
+                    // Save new order to scene flag
+                    const newOrder = html.find('.player-row').map(function(){return this.dataset.actorId;}).get();
+                    const scene = game.scenes?.active;
+                    if (scene) {
+                        await scene.setFlag("nimble-action-tracker", "playerOrder", newOrder);
                     }
                 } else {
                     this.render(); // Invalid drop, restore
