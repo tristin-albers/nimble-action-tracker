@@ -21,7 +21,7 @@ Hooks.once('init', () => {
     });
     game.settings.register("nimble-action-tracker", "initiativeType", {
         name: "Initiative type",
-        hint: "Choose between Alternative (default, uses readiness statuses) or Standard (Nimble core rules with no readiness)",
+        hint: "Choose between Standard (default, Nimble core rules with no readiness) or Alternative (uses readiness statuses)",
         scope: "world",
         config: true,
         type: String,
@@ -29,7 +29,7 @@ Hooks.once('init', () => {
             "alternative": "Alternative",
             "standard": "Standard"
         },
-        default: "alternative"
+        default: "standard"
     });
     game.settings.register("nimble-action-tracker", "diceSoNiceDetected", {
         name: "'Dice So Nice!' Detected (Read Only)",
