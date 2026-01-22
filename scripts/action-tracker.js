@@ -19,6 +19,18 @@ Hooks.once('init', () => {
         type: Boolean,
         default: false
     });
+    game.settings.register("nimble-action-tracker", "initiativeType", {
+        name: "Initiative type",
+        hint: "Choose between Alternative (default, uses readiness statuses) or Standard (Nimble core rules with no readiness)",
+        scope: "world",
+        config: true,
+        type: String,
+        choices: {
+            "alternative": "Alternative",
+            "standard": "Standard"
+        },
+        default: "alternative"
+    });
 });
 
 // Listen for flag changes to open/close tracker UI

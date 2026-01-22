@@ -57,7 +57,8 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
     async _prepareContext(options) {
         const context = await super._prepareContext(options);
         const isGM = game.user.isGM;
-        let data = { isGM, players: [], npcs: [] };
+        const initiativeType = game.settings.get("nimble-action-tracker", "initiativeType");
+        let data = { isGM, players: [], npcs: [], initiativeType };
 
         // Add combatActive flag for GM
         data.combatActive = isGM ? this.combatActive : undefined;
@@ -245,6 +246,7 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
             for (const user of playerUsers) {
                 await user.setFlag("nimble-action-tracker", "showTracker", false);
             }
+            // Reset all actors to default state (works for both initiative types)
             for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
                 await actor.setFlag("nimble-action-tracker", "state", {
                     readiness: "",
@@ -346,30 +348,58 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
             ui.notifications.warn("No character assigned.");
             return;
         }
+
+        const initiativeType = game.settings.get("nimble-action-tracker", "initiativeType");
         let readiness = "";
         let pips = [];
-        if (value >= 21) {
-            readiness = "Vigilant";
-            pips = [
-                { type: "inspired", active: true },
-                { type: "inspired", active: true },
-                { type: "neutral", active: true }
-            ];
-        } else if (value >= 11) {
-            readiness = "Ready";
-            pips = [
-                { type: "neutral", active: true },
-                { type: "neutral", active: true },
-                { type: "neutral", active: true }
-            ];
+
+        if (initiativeType === "standard") {
+            // Standard mode: Only neutral pips
+            if (value >= 20) {
+                pips = [
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: true }
+                ];
+            } else if (value >= 10) {
+                pips = [
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: false }
+                ];
+            } else {
+                pips = [
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: false },
+                    { type: "neutral", active: false }
+                ];
+            }
         } else {
-            readiness = "Hesitant";
-            pips = [
-                { type: "bane", active: true },
-                { type: "bane", active: true },
-                { type: "neutral", active: true }
-            ];
+            // Alternative mode: Current behavior with readiness statuses
+            if (value >= 21) {
+                readiness = "Vigilant";
+                pips = [
+                    { type: "inspired", active: true },
+                    { type: "inspired", active: true },
+                    { type: "neutral", active: true }
+                ];
+            } else if (value >= 11) {
+                readiness = "Ready";
+                pips = [
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: true },
+                    { type: "neutral", active: true }
+                ];
+            } else {
+                readiness = "Hesitant";
+                pips = [
+                    { type: "bane", active: true },
+                    { type: "bane", active: true },
+                    { type: "neutral", active: true }
+                ];
+            }
         }
+
         await actor.setFlag("nimble-action-tracker", "state", {
             readiness,
             pips
@@ -580,7 +610,7 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
         const roll = await new Roll(`1d20 + ${dex}`).evaluate();
 
         // Post to chat
-        await roll.toMessage({ 
+        await roll.toMessage({
             flavor: `Initiative`,
             speaker: ChatMessage.getSpeaker({ actor })
         });
@@ -588,16 +618,52 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
         // Delay after chat message
         await new Promise(resolve => setTimeout(resolve, 3600));
 
-        // Calculate and set result
+        // Calculate and set result based on initiative type
         let result = roll.total;
         let newState = { readiness: "", pips: [] };
 
-        if (result >= 20) {
-            newState = { readiness: "Vigilant", pips: [{type: "inspired", active: true}, {type: "inspired", active: true}, {type: "neutral", active: true}] };
-        } else if (result >= 10) {
-            newState = { readiness: "Ready", pips: [{type: "neutral", active: true}, {type: "neutral", active: true}, {type: "neutral", active: true}] };
+        const initiativeType = game.settings.get("nimble-action-tracker", "initiativeType");
+
+        if (initiativeType === "standard") {
+            // Standard mode: Only neutral pips based on Nimble core rules
+            // 1-9: 1 pip, 10-19: 2 pips, 20+: 3 pips
+            if (result >= 20) {
+                newState = {
+                    readiness: "",
+                    pips: [
+                        {type: "neutral", active: true},
+                        {type: "neutral", active: true},
+                        {type: "neutral", active: true}
+                    ]
+                };
+            } else if (result >= 10) {
+                newState = {
+                    readiness: "",
+                    pips: [
+                        {type: "neutral", active: true},
+                        {type: "neutral", active: true},
+                        {type: "neutral", active: false}
+                    ]
+                };
+            } else {
+                newState = {
+                    readiness: "",
+                    pips: [
+                        {type: "neutral", active: true},
+                        {type: "neutral", active: false},
+                        {type: "neutral", active: false}
+                    ]
+                };
+            }
         } else {
-            newState = { readiness: "Hesitant", pips: [{type: "bane", active: true}, {type: "bane", active: true}, {type: "neutral", active: true}] };
+            // Alternative mode: Current behavior with readiness statuses
+            if (result >= 20) {
+                newState = { readiness: "Vigilant", pips: [{type: "inspired", active: true}, {type: "inspired", active: true}, {type: "neutral", active: true}] };
+            } else if (result >= 10) {
+                newState = { readiness: "Ready", pips: [{type: "neutral", active: true}, {type: "neutral", active: true}, {type: "neutral", active: true}] };
+            } else {
+                newState = { readiness: "Hesitant", pips: [{type: "bane", active: true}, {type: "bane", active: true}, {type: "neutral", active: true}] };
+            }
         }
 
         await actor.setFlag("nimble-action-tracker", "state", newState);

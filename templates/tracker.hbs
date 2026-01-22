@@ -20,7 +20,9 @@
             <div class="player-row modern" data-actor-id="{{this.id}}">
                 <div class="row-top" style="position: relative;">
                     <span class="player-name">{{this.name}}</span>
-                    <span class="readiness-tag readiness-top-right {{this.readiness}}">{{#if this.readiness}}[{{this.readiness}}]{{/if}}</span>
+                    {{#unless (eq ../initiativeType "standard")}}
+                        <span class="readiness-tag readiness-top-right {{this.readiness}}">{{#if this.readiness}}[{{this.readiness}}]{{/if}}</span>
+                    {{/unless}}
                 </div>
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;">
                     <div class="pip-container" id="pips-{{this.id}}">
@@ -63,9 +65,22 @@
         <div class="player-row modern" data-actor-id="{{player.id}}" style="border-bottom: none;">
             <div class="row-top" style="display: flex; justify-content: space-between; align-items: center;">
                 <span class="player-name">{{player.name}}</span>
-                <span class="readiness-tag {{player.readiness}}">{{#if player.readiness}}[{{player.readiness}}]{{/if}}</span>
+                {{#unless (eq initiativeType "standard")}}
+                    <span class="readiness-tag {{player.readiness}}">{{#if player.readiness}}[{{player.readiness}}]{{/if}}</span>
+                {{/unless}}
             </div>
-            {{#unless player.readiness}}
+            {{#if (eq initiativeType "standard")}}
+                {{#unless (or player.pips.[0].active player.pips.[1].active player.pips.[2].active)}}
+                    <div style="display: flex; flex-direction: column; align-items: center; margin-top: 8px;">
+                        <button class="roll-init icon-btn flashy-dice" data-action="rollInit" style="width: 48px; height: 48px; font-size: 24px; animation: dice-flash 1s infinite alternate; box-shadow: 0 0 16px #f1c40f; border-color: #f1c40f;" title="Roll Readiness">
+                            <i class="fas fa-dice-d20"></i>
+                        </button>
+                        <span style="margin: 8px 0 4px 0; font-weight: bold; color: #888;">OR</span>
+                        <input type="number" min="1" max="30" class="manual-readiness-input" placeholder="manual roll" style="width: 8rem; text-align: center; font-size: 1.1rem; padding: 0.25rem 0.5rem; border-radius: 0.3rem; border: 1px solid #ccc; color: #fff; background: transparent;" />
+                    </div>
+                {{/unless}}
+            {{else}}
+                {{#unless player.readiness}}
                 <div style="display: flex; flex-direction: column; align-items: center; margin-top: 8px;">
                     <button class="roll-init icon-btn flashy-dice" data-action="rollInit" style="width: 48px; height: 48px; font-size: 24px; animation: dice-flash 1s infinite alternate; box-shadow: 0 0 16px #f1c40f; border-color: #f1c40f;" title="Roll Readiness">
                         <i class="fas fa-dice-d20"></i>
@@ -73,13 +88,22 @@
                     <span style="margin: 8px 0 4px 0; font-weight: bold; color: #888;">OR</span>
                     <input type="number" min="1" max="30" class="manual-readiness-input" placeholder="manual roll" style="width: 8rem; text-align: center; font-size: 1.1rem; padding: 0.25rem 0.5rem; border-radius: 0.3rem; border: 1px solid #ccc; color: #fff; background: transparent;" />
                 </div>
-            {{/unless}}
+                {{/unless}}
+            {{/if}}
             <div class="pip-container" id="pips-{{player.id}}" style="margin-top: 8px; justify-content: center;">
                 <span class="loading-text">Calculating...</span>
-                {{#if player.readiness}}
-                    {{#each player.pips}}
-                        <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
-                    {{/each}}
+                {{#if (eq initiativeType "standard")}}
+                    {{#if (or player.pips.[0].active player.pips.[1].active player.pips.[2].active)}}
+                        {{#each player.pips}}
+                            <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
+                        {{/each}}
+                    {{/if}}
+                {{else}}
+                    {{#if player.readiness}}
+                        {{#each player.pips}}
+                            <div class="pip {{this.type}} {{#if this.active}}active{{/if}}" data-index="{{@index}}"></div>
+                        {{/each}}
+                    {{/if}}
                 {{/if}}
             </div>
         </div>
