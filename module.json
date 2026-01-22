@@ -1,9 +1,9 @@
 {
   "id": "nimble-action-tracker",
   "title": "Nimble Action Tracker",
-  "description": "Floating UI for Nimble 3-action economy.",
+  "description": "A simple encounter and action tracker for the Nimble v2 system.",
   "version": "1.0.0",
-  "authors": [{ "name": "Your Name" }],
+  "authors": [{ "name": "Trist" }],
   "compatibility": {
     "minimum": "13",
     "verified": "13"

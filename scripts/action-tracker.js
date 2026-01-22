@@ -9,13 +9,13 @@ const TOOL_ICON = "fas fa-dice-d20";
 // Module-level state for combat
 let combatActive = false;
 
-// Helper: Allow players to open tracker at any time
-function canPlayerOpenTracker(options = {}) {
-    if (game.user.isGM) return true;
-    if (options.allowSocketOpen) return true;
-    return true;
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
 }
-
 
 // Initialization
 Hooks.once('init', () => {
@@ -28,7 +28,6 @@ Hooks.once('init', () => {
         default: false
     });
 });
-
 
 // Listen for flag changes to open/close tracker UI
 Hooks.on("updateUser", (user, changes) => {
@@ -50,7 +49,6 @@ Hooks.on("updateUser", (user, changes) => {
     }
 });
 
-// Ready hook
 Hooks.once('ready', () => {
     console.log("Nimble Tracker | Ready Hook firing.");
     const shouldShow = game.settings.get("nimble-action-tracker", "trackerVisible");
@@ -60,7 +58,6 @@ Hooks.once('ready', () => {
     }
 });
 
-// Add scene control button for tracker
 Hooks.on("getSceneControlButtons", (controls) => {
     const add = (group) => {
         if (!group) return false;
@@ -116,14 +113,6 @@ Hooks.on("getSceneControlButtons", (controls) => {
     }
 });
 
-// Add sidebar button for tracker
-function debounce(func, wait) {
-    let timeout;
-    return function(...args) {
-        if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-}
 Hooks.on("renderActorDirectory", (app, html) => {
     const button = $(`<button class="nimble-btn"><i class="fas fa-dice-d20"></i> Action Tracker</button>`);
     button.click(debounce(() => {
@@ -138,6 +127,3 @@ Hooks.on("updateActor", (actor, change) => {
         trackerInstance.render(false);
     }
 });
-
-
-
