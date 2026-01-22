@@ -29,7 +29,6 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
     }
     constructor(options = {}) {
         super(options);
-        console.log("Nimble Tracker | Application instance created.");
     }
 
     static DEFAULT_OPTIONS = {
@@ -56,7 +55,6 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
     };
 
     async _prepareContext(options) {
-        console.log("Nimble Tracker | Gathering Data...");
         const context = await super._prepareContext(options);
         const isGM = game.user.isGM;
         let data = { isGM, players: [], npcs: [] };
@@ -102,7 +100,6 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
                 ...this._getActorTrackerData(actor)
             };
         }
-        console.log("Nimble Tracker | Data gathered:", data);
         return foundry.utils.mergeObject(context, data);
     }
 
