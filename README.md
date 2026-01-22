@@ -32,8 +32,13 @@ A simple encounter and action tracker for the Nimble v2 system in Foundry VTT.
 - **Easy Access**: Pop open the tracker from the dice icon in the token controls toolbar.
 
 ## Installation
+### Method 1: FoundryVTT Add-on Modules
+1. Open Foundry VTT
+2. Go to "Add-on Modules" and click "Install Module"
+3. In the top left search for "Nimble Action Tracker"
+4. Click "Install"
 
-### Via Manifest URL 
+### Method 2: Via Manifest URL 
 1. Open Foundry VTT
 2. Go to "Add-on Modules" and click "Install Module"
 3. Paste this URL in the "Manifest URL" field:
