@@ -51,34 +51,53 @@ Hooks.once('ready', () => {
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
+    console.log("Nimble Tracker | getSceneControlButtons hook fired", controls);
+
+    // Define the toggle handler
+    const handleToggle = () => {
+        // Toggle the current state
+        const currentState = game.settings.get("nimble-action-tracker", "trackerVisible");
+        const newState = !currentState;
+        console.log("Nimble Tracker | Toggle clicked, current:", currentState, "new:", newState);
+        game.settings.set("nimble-action-tracker", "trackerVisible", newState);
+
+        // Ensure instance exists
+        if (!trackerInstance) {
+            console.log("Nimble Tracker | Creating new instance");
+            trackerInstance = new NimbleActionTracker();
+            trackerInstance.setCombatActive(combatActive);
+        }
+
+        if (newState) {
+            console.log("Nimble Tracker | Rendering tracker");
+            trackerInstance.render(true);
+        } else {
+            console.log("Nimble Tracker | Closing tracker");
+            trackerInstance.close();
+        }
+    };
+
     const add = (group) => {
-        if (!group) return false;
+        if (!group) {
+            console.log("Nimble Tracker | No group found");
+            return false;
+        }
+        console.log("Nimble Tracker | Adding tool to group:", group.name);
         const tools = group.tools;
-        const exists = Array.isArray(tools) 
-            ? tools.some(t => t?.name === TOOL_KEY) 
+        const exists = Array.isArray(tools)
+            ? tools.some(t => t?.name === TOOL_KEY)
             : Boolean(tools[TOOL_KEY]);
-        if (exists) return true;
+        if (exists) {
+            console.log("Nimble Tracker | Tool already exists");
+            return true;
+        }
         const tool = {
             name: TOOL_KEY,
             title: TOOL_LABEL,
             icon: TOOL_ICON,
             toggle: true,
             active: game.settings.get("nimble-action-tracker", "trackerVisible"),
-            onChange: foundry.utils.debounce((active) => {
-                game.settings.set("nimble-action-tracker", "trackerVisible", active);
-                if (active) {
-                    trackerInstance.render(true);
-                } else {
-                    const element = document.getElementById("nimble-action-tracker");
-                    if (element) {
-                        element.style.opacity = "0";
-                        element.style.transition = "opacity 0.3s ease";
-                        setTimeout(() => trackerInstance.close(), 300);
-                    } else {
-                        trackerInstance.close();
-                    }
-                }
-            }, 300)
+            onChange: handleToggle
         };
         if (Array.isArray(tools)) {
             tools.push(tool);
