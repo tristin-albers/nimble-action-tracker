@@ -64,7 +64,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
             icon: TOOL_ICON,
             toggle: true,
             active: game.settings.get("nimble-action-tracker", "trackerVisible"),
-            onClick: foundry.utils.debounce((active) => {
+            onChange: foundry.utils.debounce((active) => {
                 game.settings.set("nimble-action-tracker", "trackerVisible", active);
                 if (active) {
                     trackerInstance.render(true);
