@@ -33,7 +33,7 @@ A simple encounter and action tracker for the Nimble v2 system in Foundry VTT.
 
 ## Installation
 
-### Method 1: Via Manifest URL (Recommended)
+### Via Manifest URL 
 1. Open Foundry VTT
 2. Go to "Add-on Modules" and click "Install Module"
 3. Paste this URL in the "Manifest URL" field:
@@ -42,11 +42,10 @@ A simple encounter and action tracker for the Nimble v2 system in Foundry VTT.
    ```
 4. Click "Install"
 
-### Method 2: Via Foundry Package Manager (After Approval)
-1. Open Foundry VTT
-2. Go to "Add-on Modules" and click "Install Module"
-3. Search for "Nimble Action Tracker"
-4. Click "Install"
+### Setup 
+1. Create new (or use existing) Player users
+2. In the bottom left hand corner assign Player Characters to the User
+3. For Monsters and Allies it detects those on a per scene basis
 
 ## Compatibility
 
