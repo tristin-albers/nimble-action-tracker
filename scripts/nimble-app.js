@@ -408,32 +408,32 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
     }
 
     _setupHoverEffects() {
-        // Player names
-        this.element.querySelectorAll('.player-name').forEach(nameEl => {
-            nameEl.addEventListener('mouseenter', (ev) => {
-                const actorId = ev.target.closest('.player-row')?.dataset.actorId;
+        // Player rows (entire card)
+        this.element.querySelectorAll('.player-row').forEach(row => {
+            row.addEventListener('mouseenter', (ev) => {
+                const actorId = ev.currentTarget.dataset.actorId;
                 if (!actorId || actorId === "none") return;
                 const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
                 if (token) token._onHoverIn({});
             });
-            nameEl.addEventListener('mouseleave', (ev) => {
-                const actorId = ev.target.closest('.player-row')?.dataset.actorId;
+            row.addEventListener('mouseleave', (ev) => {
+                const actorId = ev.currentTarget.dataset.actorId;
                 if (!actorId || actorId === "none") return;
                 const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
                 if (token) token._onHoverOut({});
             });
         });
 
-        // NPC names
-        this.element.querySelectorAll('.npc-name').forEach(nameEl => {
-            nameEl.addEventListener('mouseenter', (ev) => {
-                const tokenId = ev.target.closest('.npc-row')?.dataset.tokenId;
+        // NPC rows (entire card)
+        this.element.querySelectorAll('.npc-row').forEach(row => {
+            row.addEventListener('mouseenter', (ev) => {
+                const tokenId = ev.currentTarget.dataset.tokenId;
                 if (!tokenId) return;
                 const token = canvas.tokens.placeables.find(t => t.id === tokenId);
                 if (token) token._onHoverIn({});
             });
-            nameEl.addEventListener('mouseleave', (ev) => {
-                const tokenId = ev.target.closest('.npc-row')?.dataset.tokenId;
+            row.addEventListener('mouseleave', (ev) => {
+                const tokenId = ev.currentTarget.dataset.tokenId;
                 if (!tokenId) return;
                 const token = canvas.tokens.placeables.find(t => t.id === tokenId);
                 if (token) token._onHoverOut({});
