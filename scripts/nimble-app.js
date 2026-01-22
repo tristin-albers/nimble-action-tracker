@@ -46,16 +46,6 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
         position: {
             width: 300,
             height: "auto"
-        },
-        actions: {
-            newRound: this._onNewRound,
-            rollInit: this._onRollInit,
-            requestInit: this._onRequestInit,
-            endCombat: this._onEndCombat,
-            fillPips: this._onFillPips,
-            toggleTokenRing: this._onToggleTokenRing,
-            toggleNpcRing: this._onToggleNpcRing,
-            toggleDeadState: this._onToggleDeadState
         }
     };
 
@@ -140,6 +130,11 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
             }
         }, 0);
 
+        // Button event listeners (using data-action attributes)
+        this.element.querySelectorAll('[data-action]').forEach(button => {
+            button.addEventListener('click', this._onButtonClick.bind(this));
+        });
+
         // Pip click listeners (can't use actions due to dynamic data-index)
         this.element.querySelectorAll('.pip').forEach(pip => {
             pip.addEventListener('click', this._onPipClick.bind(this));
@@ -161,6 +156,42 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
 
         // Make header/row draggable
         this._setupDraggable();
+    }
+
+    // Central button click handler that routes to specific action handlers
+    async _onButtonClick(event) {
+        const button = event.currentTarget;
+        const action = button.dataset.action;
+
+        if (!action) return;
+
+        // Route to the appropriate handler
+        switch(action) {
+            case 'newRound':
+                await this._onNewRound(event, button);
+                break;
+            case 'rollInit':
+                await this._onRollInit(event, button);
+                break;
+            case 'requestInit':
+                await this._onRequestInit(event, button);
+                break;
+            case 'endCombat':
+                await this._onEndCombat(event, button);
+                break;
+            case 'fillPips':
+                await this._onFillPips(event, button);
+                break;
+            case 'toggleTokenRing':
+                await this._onToggleTokenRing(event, button);
+                break;
+            case 'toggleNpcRing':
+                await this._onToggleNpcRing(event, button);
+                break;
+            case 'toggleDeadState':
+                await this._onToggleDeadState(event, button);
+                break;
+        }
     }
 
     // Action handlers (instance methods for ApplicationV2)
@@ -200,48 +231,35 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
 
     async _onEndCombat(event, target) {
         if (!game.user.isGM) return;
-        // Show confirmation dialog
-        const d = new Dialog({
-            title: "End Combat?",
+        // Show confirmation dialog using foundry.applications.api.DialogV2
+        const confirmed = await foundry.applications.api.DialogV2.confirm({
+            window: { title: "End Combat?" },
             content: `<div style='padding:1em;text-align:center;'>
                 <div style='font-size:1.2em;margin-bottom:1em;'>Are you sure you want to end combat?</div>
-                <div style='display:flex;justify-content:center;gap:16px;'>
-                    <button class='end-combat-cancel' style='background:#ff2a2a;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #ff2a2a;cursor:pointer;'>
-                        <i class='fas fa-times'></i>
-                    </button>
-                     <button class='end-combat-confirm' style='background:#2ecc40;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #2ecc40;cursor:pointer;'>
-                        <i class='fas fa-check'></i>
-                    </button>
-                </div>
             </div>`,
-            buttons: {},
-            render: html => {
-                html.find('.end-combat-confirm').click(async () => {
-                    d.close();
-                    this.combatActive = false;
-                    this.render();
-                    const playerUsers = game.users.filter(u => !u.isGM && u.active);
-                    for (const user of playerUsers) {
-                        await user.setFlag("nimble-action-tracker", "showTracker", false);
-                    }
-                    for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
-                        await actor.setFlag("nimble-action-tracker", "state", {
-                            readiness: "",
-                            pips: [
-                                { type: "neutral", active: false },
-                                { type: "neutral", active: false },
-                                { type: "neutral", active: false }
-                            ]
-                        });
-                    }
-                    await this.resetAllTokenRings();
-                });
-                html.find('.end-combat-cancel').click(() => {
-                    d.close();
+            rejectClose: false,
+            modal: true
+        });
+
+        if (confirmed) {
+            this.combatActive = false;
+            this.render();
+            const playerUsers = game.users.filter(u => !u.isGM && u.active);
+            for (const user of playerUsers) {
+                await user.setFlag("nimble-action-tracker", "showTracker", false);
+            }
+            for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
+                await actor.setFlag("nimble-action-tracker", "state", {
+                    readiness: "",
+                    pips: [
+                        { type: "neutral", active: false },
+                        { type: "neutral", active: false },
+                        { type: "neutral", active: false }
+                    ]
                 });
             }
-        });
-        d.render(true);
+            await this.resetAllTokenRings();
+        }
     }
 
     async _onFillPips(event, target) {
@@ -289,7 +307,7 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
             ui.notifications.warn("No token found for this row.");
             return;
         }
-        const isDead = token.actor?.effects?.some(e => e.statuses?.has?.("dead") || e.statuses?.includes?.("dead"));
+        const isDead = token.actor?.effects?.some(e => e.statuses?.has("dead"));
         await token.actor.toggleStatusEffect("dead", {overlay: true, active: !isDead});
         await token.document.update({
             alpha: isDead ? 1.0 : 0.5
@@ -498,7 +516,7 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
     async colorAndPingTokenForNewRound(token) {
         // Ignore tokens with the "Dead" status effect
         const hasDeadEffect = token.actor?.effects?.some(e => {
-            return e.statuses?.includes("dead") || e.getFlag("core", "statusId") === "dead" || e.label?.toLowerCase() === "dead";
+            return e.statuses?.has("dead") || e.getFlag("core", "statusId") === "dead" || e.label?.toLowerCase() === "dead";
         });
         if (hasDeadEffect) return;
         const brightGreen = "#00ff73";
@@ -600,8 +618,8 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
             if (token.document.hidden) continue;
             // Ignore tokens with the "Dead" status effect
             const hasDeadEffect = token.actor?.effects?.some(e => {
-                // Foundry v12: status effects have statuses and/or flags
-                return e.statuses?.includes("dead") || e.getFlag("core", "statusId") === "dead" || e.label?.toLowerCase() === "dead";
+                // Foundry v13: status effects use Set.has() not Array.includes()
+                return e.statuses?.has("dead") || e.getFlag("core", "statusId") === "dead" || e.label?.toLowerCase() === "dead";
             });
             if (hasDeadEffect) continue;
             let ringColor;
