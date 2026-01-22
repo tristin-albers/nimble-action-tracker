@@ -1,4 +1,4 @@
-export class NimbleActionTracker extends Application {
+export class NimbleActionTracker extends foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2) {
     combatActive = false;
 
     setCombatActive(active) {
@@ -27,43 +27,47 @@ export class NimbleActionTracker extends Application {
             }
         } catch (e) { console.warn('Nimble Tracker: Failed to restore position', e); }
     }
-    // Tracker can be opened/closed by players at any time; GM can force open
-    render(force, options = {}) {
-        // Only block if some future logic wants to restrict
-        const rendered = super.render(force, options);
-        // After rendering, restore position
-        setTimeout(() => {
-            this.restorePositionFromLocalStorage();
-            if (this.position.left !== undefined && this.position.top !== undefined) {
-                // Only set position if the element exists and is an HTMLElement
-                const el = this.element?.[0];
-                if (el instanceof HTMLElement) {
-                    this.setPosition({ left: this.position.left, top: this.position.top });
-                }
-            }
-        }, 0);
-        return rendered;
-    }
     constructor(options = {}) {
         super(options);
         console.log("Nimble Tracker | Application instance created.");
     }
 
-    static get defaultOptions() {
-        return mergeObject(super.defaultOptions, {
-            id: "nimble-action-tracker",
-            template: "modules/nimble-action-tracker/templates/tracker.hbs",
-            popOut: true,
-            width: 300,
-            height: "auto",
-            classes: ["nimble-tracker-fancy"], // Custom class for styling
+    static DEFAULT_OPTIONS = {
+        id: "nimble-action-tracker",
+        classes: ["nimble-tracker-fancy"],
+        tag: "div",
+        window: {
+            frame: true,
+            positioned: true,
             resizable: false,
-            minimizable: false
-        });
-    }
+            minimizable: false,
+            title: "Nimble Tracker"
+        },
+        position: {
+            width: 300,
+            height: "auto"
+        },
+        actions: {
+            newRound: this._onNewRound,
+            rollInit: this._onRollInit,
+            requestInit: this._onRequestInit,
+            endCombat: this._onEndCombat,
+            fillPips: this._onFillPips,
+            toggleTokenRing: this._onToggleTokenRing,
+            toggleNpcRing: this._onToggleNpcRing,
+            toggleDeadState: this._onToggleDeadState
+        }
+    };
 
-    getData() {
+    static PARTS = {
+        main: {
+            template: "modules/nimble-action-tracker/templates/tracker.hbs"
+        }
+    };
+
+    async _prepareContext(options) {
         console.log("Nimble Tracker | Gathering Data...");
+        const context = await super._prepareContext(options);
         const isGM = game.user.isGM;
         let data = { isGM, players: [], npcs: [] };
 
@@ -109,7 +113,7 @@ export class NimbleActionTracker extends Application {
             };
         }
         console.log("Nimble Tracker | Data gathered:", data);
-        return data;
+        return foundry.utils.mergeObject(context, data);
     }
 
     _getActorTrackerData(actor) {
@@ -125,344 +129,358 @@ export class NimbleActionTracker extends Application {
         return actor.getFlag("nimble-action-tracker", "state") || defaultState;
     }
 
-    activateListeners(html) {
-        super.activateListeners(html);
-        // Save position on close or drag
-        this.element.on('dragstop', () => this.savePositionToLocalStorage());
-        this.element.on('close', () => this.savePositionToLocalStorage());
-        
-        // NEW ROUND BUTTON (GM only)
-        html.find('.new-round').click(async () => {
-            if (!game.user.isGM) return;
-            await this.colorAndPingTokensForNewRound();
+    _onRender(context, options) {
+        super._onRender(context, options);
+
+        // Restore position after render
+        setTimeout(() => {
+            this.restorePositionFromLocalStorage();
+            if (this.position.left !== undefined && this.position.top !== undefined) {
+                this.setPosition({ left: this.position.left, top: this.position.top });
+            }
+        }, 0);
+
+        // Pip click listeners (can't use actions due to dynamic data-index)
+        this.element.querySelectorAll('.pip').forEach(pip => {
+            pip.addEventListener('click', this._onPipClick.bind(this));
         });
 
-        // Add listener for the new toggle-token-ring button
-        html.find('.toggle-token-ring').click(async ev => {
-            const actorId = ev.currentTarget.closest('.player-row').dataset.actorId;
-            const actor = game.actors.get(actorId);
-            if (!actor) return;
-            // Find the token for this actor in the current scene
-            const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
-            if (!token) return;
-            await this.ToggleTokenRing(token);
-        });
-        
-        // PIP CLICKS
-        html.find('.pip').click(async ev => {
-            const row = ev.currentTarget.closest('.player-row');
-            const actorId = row.dataset.actorId;
-            if (!actorId || actorId === "none") return;
+        // Manual readiness input
+        const manualInput = this.element.querySelector('.manual-readiness-input');
+        if (manualInput) {
+            manualInput.addEventListener('change', this._onManualReadinessChange.bind(this));
+        }
 
-            const actor = game.actors.get(actorId);
-            const index = parseInt(ev.currentTarget.dataset.index);
-            let state = JSON.parse(JSON.stringify(this._getActorTrackerData(actor)));
-            const pip = state.pips[index];
-
-            if (pip.active && !ev.shiftKey && !ev.ctrlKey) {
-                pip.active = false;
-            } else {
-                if (ev.shiftKey) { pip.type = "inspired"; pip.active = true; }
-                else if (ev.ctrlKey) { pip.type = "bane"; pip.active = true; }
-                else { pip.type = "neutral"; pip.active = true; }
-            }
-            await actor.setFlag("nimble-action-tracker", "state", state);
-        });
-
-        // Manual readiness input (Player view only)
-        html.find('.manual-readiness-input').on('change', async ev => {
-            const input = ev.currentTarget;
-            let value = parseInt(input.value);
-            if (isNaN(value) || value < 1 || value > 30) {
-                ui.notifications.warn("Please enter a number between 1 and 30.");
-                input.value = '';
-                return;
-            }
-            // Set readiness for the current player
-            const actor = game.user.character;
-            if (!actor) {
-                ui.notifications.warn("No character assigned.");
-                return;
-            }
-            let readiness = "";
-            let pips = [];
-            if (value >= 21) {
-                readiness = "Vigilant";
-                pips = [
-                    { type: "inspired", active: true },
-                    { type: "inspired", active: true },
-                    { type: "neutral", active: true }
-                ];
-            } else if (value >= 11) {
-                readiness = "Ready";
-                pips = [
-                    { type: "neutral", active: true },
-                    { type: "neutral", active: true },
-                    { type: "neutral", active: true }
-                ];
-            } else {
-                readiness = "Hesitant";
-                pips = [
-                    { type: "bane", active: true },
-                    { type: "bane", active: true },
-                    { type: "neutral", active: true }
-                ];
-            }
-            await actor.setFlag("nimble-action-tracker", "state", {
-                readiness,
-                pips
-            });
-            this.render();
-        });
-
-        // Drag-and-drop player reorder (GM only)
+        // Drag-and-drop for GM player reorder
         if (game.user.isGM) {
-            let dragSrc = null;
-            let originalOrder = [];
-            // Save original order
-            html.find('.player-row').each(function() {
-                originalOrder.push(this.dataset.actorId);
+            this._setupDragAndDrop();
+        }
+
+        // Hover effects for player and NPC names
+        this._setupHoverEffects();
+
+        // Make header/row draggable
+        this._setupDraggable();
+    }
+
+    // Action handlers (instance methods for ApplicationV2)
+    async _onNewRound(event, target) {
+        if (!game.user.isGM) return;
+        await this.colorAndPingTokensForNewRound();
+    }
+
+    async _onRollInit(event, target) {
+        event.preventDefault();
+        const row = target.closest('.player-row');
+        const actorId = row?.dataset.actorId;
+        const actor = game.actors.get(actorId) || game.user.character;
+
+        if (actor) {
+            await this.rollCombatReadiness(actor);
+            if (game.user.isGM) {
+                await this.colorAndPingTokensForNewRound();
+            }
+        } else {
+            ui.notifications.warn("No character found to roll for.");
+        }
+    }
+
+    async _onRequestInit(event, target) {
+        if (!game.user.isGM) return;
+        this.combatActive = true;
+        this.render();
+        // Set flag for all active player users to open tracker
+        const playerUsers = game.users.filter(u => !u.isGM && u.active);
+        for (const user of playerUsers) {
+            await user.setFlag("nimble-action-tracker", "showTracker", true);
+        }
+        // Also highlight token rings for new round
+        await this.colorAndPingTokensForNewRound();
+    }
+
+    async _onEndCombat(event, target) {
+        if (!game.user.isGM) return;
+        // Show confirmation dialog
+        const d = new Dialog({
+            title: "End Combat?",
+            content: `<div style='padding:1em;text-align:center;'>
+                <div style='font-size:1.2em;margin-bottom:1em;'>Are you sure you want to end combat?</div>
+                <div style='display:flex;justify-content:center;gap:16px;'>
+                    <button class='end-combat-cancel' style='background:#ff2a2a;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #ff2a2a;cursor:pointer;'>
+                        <i class='fas fa-times'></i>
+                    </button>
+                     <button class='end-combat-confirm' style='background:#2ecc40;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #2ecc40;cursor:pointer;'>
+                        <i class='fas fa-check'></i>
+                    </button>
+                </div>
+            </div>`,
+            buttons: {},
+            render: html => {
+                html.find('.end-combat-confirm').click(async () => {
+                    d.close();
+                    this.combatActive = false;
+                    this.render();
+                    const playerUsers = game.users.filter(u => !u.isGM && u.active);
+                    for (const user of playerUsers) {
+                        await user.setFlag("nimble-action-tracker", "showTracker", false);
+                    }
+                    for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
+                        await actor.setFlag("nimble-action-tracker", "state", {
+                            readiness: "",
+                            pips: [
+                                { type: "neutral", active: false },
+                                { type: "neutral", active: false },
+                                { type: "neutral", active: false }
+                            ]
+                        });
+                    }
+                    await this.resetAllTokenRings();
+                });
+                html.find('.end-combat-cancel').click(() => {
+                    d.close();
+                });
+            }
+        });
+        d.render(true);
+    }
+
+    async _onFillPips(event, target) {
+        const actorId = target.closest('.player-row').dataset.actorId;
+        const actor = game.actors.get(actorId);
+        if (!actor) return;
+        let state = JSON.parse(JSON.stringify(this._getActorTrackerData(actor)));
+        state.pips = state.pips.map(p => {
+            if (p && p.active && (p.type === "inspired" || p.type === "bane")) {
+                return p;
+            }
+            return { type: "neutral", active: true };
+        });
+        await actor.setFlag("nimble-action-tracker", "state", state);
+    }
+
+    async _onToggleTokenRing(event, target) {
+        const actorId = target.closest('.player-row').dataset.actorId;
+        const actor = game.actors.get(actorId);
+        if (!actor) return;
+        const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
+        if (!token) return;
+        await this.ToggleTokenRing(token);
+    }
+
+    async _onToggleNpcRing(event, target) {
+        const tokenId = target.closest('.npc-row').dataset.tokenId;
+        const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+        if (!token) return;
+        await this.ToggleTokenRing(token);
+    }
+
+    async _onToggleDeadState(event, target) {
+        let token;
+        let row = target.closest('.player-row');
+        if (row && row.dataset.actorId) {
+            token = canvas.tokens.placeables.find(t => t.actor?.id === row.dataset.actorId);
+        } else {
+            row = target.closest('.npc-row');
+            if (row && row.dataset.tokenId) {
+                token = canvas.tokens.placeables.find(t => t.id === row.dataset.tokenId);
+            }
+        }
+        if (!token) {
+            ui.notifications.warn("No token found for this row.");
+            return;
+        }
+        const isDead = token.actor?.effects?.some(e => e.statuses?.has?.("dead") || e.statuses?.includes?.("dead"));
+        await token.actor.toggleStatusEffect("dead", {overlay: true, active: !isDead});
+        await token.document.update({
+            alpha: isDead ? 1.0 : 0.5
+        });
+    }
+
+    // Instance event handlers
+    async _onPipClick(event) {
+        const pip = event.currentTarget;
+        const row = pip.closest('.player-row');
+        const actorId = row.dataset.actorId;
+        if (!actorId || actorId === "none") return;
+
+        const actor = game.actors.get(actorId);
+        const index = parseInt(pip.dataset.index);
+        let state = JSON.parse(JSON.stringify(this._getActorTrackerData(actor)));
+        const pipData = state.pips[index];
+
+        if (pipData.active && !event.shiftKey && !event.ctrlKey) {
+            pipData.active = false;
+        } else {
+            if (event.shiftKey) { pipData.type = "inspired"; pipData.active = true; }
+            else if (event.ctrlKey) { pipData.type = "bane"; pipData.active = true; }
+            else { pipData.type = "neutral"; pipData.active = true; }
+        }
+        await actor.setFlag("nimble-action-tracker", "state", state);
+    }
+
+    async _onManualReadinessChange(event) {
+        const input = event.currentTarget;
+        let value = parseInt(input.value);
+        if (isNaN(value) || value < 1 || value > 30) {
+            ui.notifications.warn("Please enter a number between 1 and 30.");
+            input.value = '';
+            return;
+        }
+        const actor = game.user.character;
+        if (!actor) {
+            ui.notifications.warn("No character assigned.");
+            return;
+        }
+        let readiness = "";
+        let pips = [];
+        if (value >= 21) {
+            readiness = "Vigilant";
+            pips = [
+                { type: "inspired", active: true },
+                { type: "inspired", active: true },
+                { type: "neutral", active: true }
+            ];
+        } else if (value >= 11) {
+            readiness = "Ready";
+            pips = [
+                { type: "neutral", active: true },
+                { type: "neutral", active: true },
+                { type: "neutral", active: true }
+            ];
+        } else {
+            readiness = "Hesitant";
+            pips = [
+                { type: "bane", active: true },
+                { type: "bane", active: true },
+                { type: "neutral", active: true }
+            ];
+        }
+        await actor.setFlag("nimble-action-tracker", "state", {
+            readiness,
+            pips
+        });
+        this.render();
+    }
+
+    _setupHoverEffects() {
+        // Player names
+        this.element.querySelectorAll('.player-name').forEach(nameEl => {
+            nameEl.addEventListener('mouseenter', (ev) => {
+                const actorId = ev.target.closest('.player-row')?.dataset.actorId;
+                if (!actorId || actorId === "none") return;
+                const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
+                if (token) token._onHoverIn({});
             });
-            html.find('.player-row .player-name').attr('draggable', true);
-            html.find('.player-row .player-name').on('dragstart', function(ev) {
-                dragSrc = $(this).closest('.player-row')[0];
-                ev.originalEvent.dataTransfer.effectAllowed = 'move';
-                ev.originalEvent.dataTransfer.setData('text/plain', dragSrc.dataset.actorId);
-                $(this).addClass('dragging');
+            nameEl.addEventListener('mouseleave', (ev) => {
+                const actorId = ev.target.closest('.player-row')?.dataset.actorId;
+                if (!actorId || actorId === "none") return;
+                const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
+                if (token) token._onHoverOut({});
             });
-            html.find('.player-row').on('dragover', function(ev) {
+        });
+
+        // NPC names
+        this.element.querySelectorAll('.npc-name').forEach(nameEl => {
+            nameEl.addEventListener('mouseenter', (ev) => {
+                const tokenId = ev.target.closest('.npc-row')?.dataset.tokenId;
+                if (!tokenId) return;
+                const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+                if (token) token._onHoverIn({});
+            });
+            nameEl.addEventListener('mouseleave', (ev) => {
+                const tokenId = ev.target.closest('.npc-row')?.dataset.tokenId;
+                if (!tokenId) return;
+                const token = canvas.tokens.placeables.find(t => t.id === tokenId);
+                if (token) token._onHoverOut({});
+            });
+        });
+    }
+
+    _setupDragAndDrop() {
+        let dragSrc = null;
+        const playerRows = this.element.querySelectorAll('.player-row');
+        const playerNames = this.element.querySelectorAll('.player-row .player-name');
+
+        playerNames.forEach(nameEl => {
+            nameEl.setAttribute('draggable', true);
+
+            nameEl.addEventListener('dragstart', (ev) => {
+                dragSrc = ev.target.closest('.player-row');
+                ev.dataTransfer.effectAllowed = 'move';
+                ev.dataTransfer.setData('text/plain', dragSrc.dataset.actorId);
+                ev.target.classList.add('dragging');
+            });
+
+            nameEl.addEventListener('dragend', (ev) => {
+                this.element.querySelectorAll('.player-name').forEach(el => {
+                    el.classList.remove('dragging');
+                });
+                const currentOrder = Array.from(this.element.querySelectorAll('.player-row'))
+                    .map(row => row.dataset.actorId);
+                if (new Set(currentOrder).size !== currentOrder.length) {
+                    this.render();
+                }
+            });
+        });
+
+        playerRows.forEach(row => {
+            row.addEventListener('dragover', (ev) => {
                 ev.preventDefault();
-                ev.originalEvent.dataTransfer.dropEffect = 'move';
-                $(this).addClass('drag-over');
+                ev.dataTransfer.dropEffect = 'move';
+                ev.currentTarget.classList.add('drag-over');
             });
-            html.find('.player-row').on('dragleave', function(ev) {
-                $(this).removeClass('drag-over');
+
+            row.addEventListener('dragleave', (ev) => {
+                ev.currentTarget.classList.remove('drag-over');
             });
-            html.find('.player-row').on('drop', async (ev) => {
+
+            row.addEventListener('drop', async (ev) => {
                 ev.preventDefault();
-                html.find('.player-row').removeClass('drag-over');
+                this.element.querySelectorAll('.player-row').forEach(r => {
+                    r.classList.remove('drag-over');
+                });
+
                 const targetRow = ev.currentTarget;
-                const srcId = ev.originalEvent.dataTransfer.getData('text/plain');
+                const srcId = ev.dataTransfer.getData('text/plain');
+
                 if (!srcId || targetRow.dataset.actorId === srcId) {
-                    this.render(); // Invalid drop, restore
+                    this.render();
                     return;
                 }
-                // Reorder DOM
-                const srcElem = html.find(`.player-row[data-actor-id="${srcId}"]`)[0];
-                if (srcElem && targetRow) {
-                    if (srcElem !== targetRow) {
-                        if ($(targetRow).index() > $(srcElem).index()) {
-                            $(targetRow).after(srcElem);
-                        } else {
-                            $(targetRow).before(srcElem);
-                        }
+
+                const srcElem = this.element.querySelector(`.player-row[data-actor-id="${srcId}"]`);
+                if (srcElem && targetRow && srcElem !== targetRow) {
+                    const allRows = Array.from(this.element.querySelectorAll('.player-row'));
+                    const targetIndex = allRows.indexOf(targetRow);
+                    const srcIndex = allRows.indexOf(srcElem);
+
+                    if (targetIndex > srcIndex) {
+                        targetRow.after(srcElem);
+                    } else {
+                        targetRow.before(srcElem);
                     }
-                    // Save new order to scene flag
-                    const newOrder = html.find('.player-row').map(function(){return this.dataset.actorId;}).get();
+
+                    const newOrder = Array.from(this.element.querySelectorAll('.player-row'))
+                        .map(r => r.dataset.actorId);
                     const scene = game.scenes?.active;
                     if (scene) {
                         await scene.setFlag("nimble-action-tracker", "playerOrder", newOrder);
                     }
                 } else {
-                    this.render(); // Invalid drop, restore
-                }
-            });
-            html.find('.player-row .player-name').on('dragend', (ev) => {
-                html.find('.player-row .player-name').removeClass('dragging');
-                // If order is invalid, restore
-                const currentOrder = html.find('.player-row').map(function(){return this.dataset.actorId;}).get();
-                if (new Set(currentOrder).size !== currentOrder.length) {
-                    // Duplicates or missing, restore
                     this.render();
                 }
             });
-        }
+        });
+    }
 
-        // Roll initiative
-        html.find('.roll-init').click(async (ev) => { 
-            ev.preventDefault();
-            // Look for ID in the row, otherwise fallback to the user's character
-            const row = ev.currentTarget.closest('.player-row');
-            const actorId = row ? row.dataset.actorId : null;
-            const actor = game.actors.get(actorId) || game.user.character;
-
-            if (actor) {
-                await this.rollCombatReadiness(actor);
-                // If GM triggers, also highlight token rings
-                if (game.user.isGM) {
-                    await this.colorAndPingTokensForNewRound();
-                }
-            } else {
-                ui.notifications.warn("No character found to roll for.");
-            }
-        });
-
-        // Request initiative (GM starts combat)
-        html.find('.request-init').click(async () => {
-            if (!game.user.isGM) return;
-            this.combatActive = true;
-            this.render();
-            // Set flag for all active player users to open tracker
-            const playerUsers = game.users.filter(u => !u.isGM && u.active);
-            for (const user of playerUsers) {
-                await user.setFlag("nimble-action-tracker", "showTracker", true);
-            }
-            // Also highlight token rings for new round
-            await this.colorAndPingTokensForNewRound();
-        });
-
-        // End combat (GM ends combat) with confirmation dialog
-        html.find('.end-combat').click(async () => {
-            if (!game.user.isGM) return;
-            // Show confirmation dialog
-            const d = new Dialog({
-                title: "End Combat?",
-                content: `<div style='padding:1em;text-align:center;'>
-                    <div style='font-size:1.2em;margin-bottom:1em;'>Are you sure you want to end combat?</div>
-                    <div style='display:flex;justify-content:center;gap:16px;'>
-                        <button class='end-combat-cancel' style='background:#ff2a2a;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #ff2a2a;cursor:pointer;'>
-                            <i class='fas fa-times'></i>
-                        </button>
-                         <button class='end-combat-confirm' style='background:#2ecc40;color:#fff;border:none;border-radius:6px;padding:0.5em 1.2em;font-size:1.3em;box-shadow:0 0 8px #2ecc40;cursor:pointer;'>
-                            <i class='fas fa-check'></i>
-                        </button>
-                    </div>
-                </div>`,
-                buttons: {}, // We'll handle buttons manually
-                render: html => {
-                    html.find('.end-combat-confirm').click(async () => {
-                        d.close();
-                        // Proceed with end combat logic
-                        this.combatActive = false;
-                        this.render();
-                        // Set flag for all active player users to close tracker
-                        const playerUsers = game.users.filter(u => !u.isGM && u.active);
-                        for (const user of playerUsers) {
-                            await user.setFlag("nimble-action-tracker", "showTracker", false);
-                        }
-                        // Clear pips and readiness for all player actors
-                        for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
-                            await actor.setFlag("nimble-action-tracker", "state", {
-                                readiness: "",
-                                pips: [
-                                    { type: "neutral", active: false },
-                                    { type: "neutral", active: false },
-                                    { type: "neutral", active: false }
-                                ]
-                            });
-                        }
-                        // Reset all token rings and flags
-                        await this.resetAllTokenRings();
-                    });
-                    html.find('.end-combat-cancel').click(() => {
-                        d.close();
-                    });
-                }
-            });
-            d.render(true);
-        });
-
-        // Refill row pips (no readiness prompt)
-        html.find('.fill-row-pips').click(async ev => {
-            const actorId = ev.currentTarget.closest('.player-row').dataset.actorId;
-            const actor = game.actors.get(actorId);
-            if (!actor) return;
-            let state = JSON.parse(JSON.stringify(this._getActorTrackerData(actor)));
-            // Only preserve active inspired/bane pips, all others become neutral and active
-            state.pips = state.pips.map(p => {
-                if (p && p.active && (p.type === "inspired" || p.type === "bane")) {
-                    return p;
-                }
-                // Fill all other pips (inactive or not inspired/bane) as neutral and active
-                return { type: "neutral", active: true };
-            });
-            // Do NOT clear readiness or prompt for roll
-            await actor.setFlag("nimble-action-tracker", "state", state);
-        });
-
-        // Hover effect for player and NPC names
-        // Player names
-        html.find('.player-name').on('mouseenter', function(ev) {
-            const actorId = $(this).closest('.player-row').data('actorId');
-            if (!actorId || actorId === "none") return;
-            const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
-            if (token) token._onHoverIn({});
-        });
-        html.find('.player-name').on('mouseleave', function(ev) {
-            const actorId = $(this).closest('.player-row').data('actorId');
-            if (!actorId || actorId === "none") return;
-            const token = canvas.tokens.placeables.find(t => t.actor?.id === actorId);
-            if (token) token._onHoverOut({});
-        });
-
-        // NPC names
-        html.find('.npc-name').on('mouseenter', function(ev) {
-            const tokenId = $(this).closest('.npc-row').data('tokenId');
-            if (!tokenId) return;
-            const token = canvas.tokens.placeables.find(t => t.id === tokenId);
-            if (token) token._onHoverIn({});
-        });
-        html.find('.npc-name').on('mouseleave', function(ev) {
-            const tokenId = $(this).closest('.npc-row').data('tokenId');
-            if (!tokenId) return;
-            const token = canvas.tokens.placeables.find(t => t.id === tokenId);
-            if (token) token._onHoverOut({});
-        });
-
-        // Listener for NPC toggle turn button
-        html.find('.toggle-npc-ring').click(async ev => {
-            const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
-            const token = canvas.tokens.placeables.find(t => t.id === tokenId);
-            if (!token) return;
-            await this.ToggleTokenRing(token);
-        });
-
-        // Toggle death state for player and NPC tokens
-        html.find('.toggle-dead-state').click(async ev => {
-            let token;
-            // Try player row first
-            let row = ev.currentTarget.closest('.player-row');
-            if (row && row.dataset.actorId) {
-                token = canvas.tokens.placeables.find(t => t.actor?.id === row.dataset.actorId);
-            } else {
-                // Try NPC row
-                row = ev.currentTarget.closest('.npc-row');
-                if (row && row.dataset.tokenId) {
-                    token = canvas.tokens.placeables.find(t => t.id === row.dataset.tokenId);
-                }
-            }
-            if (!token) {
-                ui.notifications.warn("No token found for this row.");
-                return;
-            }
-            // Check if the token already has the 'dead' status
-            const isDead = token.actor?.effects?.some(e => e.statuses?.has?.("dead") || e.statuses?.includes?.("dead"));
-            // Toggle the core 'dead' status effect as an overlay
-            await token.actor.toggleStatusEffect("dead", {overlay: true, active: !isDead});
-            // Update the token's opacity
-            await token.document.update({
-                alpha: isDead ? 1.0 : 0.5
-            });
-        });
-        
-        // Listener for NPC toggle turn button
-        html.find('.toggle-npc-ring').click(async ev => {
-            const tokenId = ev.currentTarget.closest('.npc-row').dataset.tokenId;
-            const token = canvas.tokens.placeables.find(t => t.id === tokenId);
-            if (!token) return;
-            await this.ToggleTokenRing(token);
-        });
-
-        // Make only the GM header or player name row draggable
+    _setupDraggable() {
         if (game.user.isGM) {
-            const header = html.find('.gm-header')[0];
-            if (header) new Draggable(this, html, header, false);
+            const header = this.element.querySelector('.gm-header');
+            if (header) new Draggable(this, this.element, header, false);
         } else {
-            const playerRow = html.find('.player-row .row-top')[0];
-            if (playerRow) new Draggable(this, html, playerRow, false);
+            const playerRow = this.element.querySelector('.player-row .row-top');
+            if (playerRow) new Draggable(this, this.element, playerRow, false);
         }
-        // Save position after drag
-        this.element.on('dragstop', () => this.savePositionToLocalStorage());
     }
 
     // Toggle the token ring for an individual token

@@ -3,14 +3,14 @@
         <div class="gm-header">
             <div class="header-title">Nimble Tracker</div>
             {{#if combatActive}}
-                <button class="end-combat icon-btn end-combat-glow" style="width: 32px; height: 32px;" title="End Combat">
+                <button class="end-combat icon-btn end-combat-glow" data-action="endCombat" style="width: 32px; height: 32px;" title="End Combat">
                     <i class="fas fa-stop"></i>
                 </button>
-                <button class="new-round icon-btn" style="width: 32px; height: 32px; margin-left: 8px;" title="New Round">
+                <button class="new-round icon-btn" data-action="newRound" style="width: 32px; height: 32px; margin-left: 8px;" title="New Round">
                     <i class="fas fa-fast-forward"></i>
                 </button>
             {{else}}
-                <button class="request-init icon-btn" style="width: 32px; height: 32px;" title="Initiative">
+                <button class="request-init icon-btn" data-action="requestInit" style="width: 32px; height: 32px;" title="Initiative">
                     <i class="fas fa-dice-d20"></i>
                 </button>
             {{/if}}
@@ -30,10 +30,10 @@
                         {{/each}}
                     </div>
                     <span style="display: flex; gap: 4px; align-items: center;">
-                        <button class="fill-row-pips icon-btn" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Refill Pips">
+                        <button class="fill-row-pips icon-btn" data-action="fillPips" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Refill Pips">
                             <i class="fas fa-sync"></i>
                         </button>
-                        <button class="toggle-token-ring icon-btn" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Toggle Turn">
+                        <button class="toggle-token-ring icon-btn" data-action="toggleTokenRing" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Toggle Turn">
                             <i class="fas fa-circle"></i>
                         </button>
                     </span>
@@ -48,10 +48,10 @@
                 <div class="npc-row" data-token-id="{{this.tokenId}}">
                     <span class="npc-name">{{this.name}}</span>
                      <span style="display: flex; gap: 4px; align-items: center;">
-                        <button class="toggle-dead-state icon-btn" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Toggle Death">
+                        <button class="toggle-dead-state icon-btn" data-action="toggleDeadState" style="width: 32px; height: 32px; font-size: 14px; align-self: center;" title="Toggle Death">
                             <i class="fas fa-skull"></i>
                         </button>
-                        <button class="toggle-npc-ring icon-btn" title="Toggle Turn">
+                        <button class="toggle-npc-ring icon-btn" data-action="toggleNpcRing" title="Toggle Turn">
                             <i class="fas fa-circle"></i>
                         </button>
                     </span>
@@ -67,7 +67,7 @@
             </div>
             {{#unless player.readiness}}
                 <div style="display: flex; flex-direction: column; align-items: center; margin-top: 8px;">
-                    <button class="roll-init icon-btn flashy-dice" style="width: 48px; height: 48px; font-size: 24px; animation: dice-flash 1s infinite alternate; box-shadow: 0 0 16px #f1c40f; border-color: #f1c40f;" title="Roll Readiness">
+                    <button class="roll-init icon-btn flashy-dice" data-action="rollInit" style="width: 48px; height: 48px; font-size: 24px; animation: dice-flash 1s infinite alternate; box-shadow: 0 0 16px #f1c40f; border-color: #f1c40f;" title="Roll Readiness">
                         <i class="fas fa-dice-d20"></i>
                     </button>
                     <span style="margin: 8px 0 4px 0; font-weight: bold; color: #888;">OR</span>
