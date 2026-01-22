@@ -9,14 +9,6 @@ const TOOL_ICON = "fas fa-dice-d20";
 // Module-level state for combat
 let combatActive = false;
 
-function debounce(func, wait) {
-    let timeout;
-    return function(...args) {
-        if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-}
-
 // Initialization
 Hooks.once('init', () => {
     trackerInstance = new NimbleActionTracker();
@@ -66,22 +58,13 @@ Hooks.on("getSceneControlButtons", (controls) => {
             ? tools.some(t => t?.name === TOOL_KEY) 
             : Boolean(tools[TOOL_KEY]);
         if (exists) return true;
-        if (typeof window.nimbleDebounce !== 'function') {
-            window.nimbleDebounce = function(func, wait) {
-                let timeout;
-                return function(...args) {
-                    if (timeout) clearTimeout(timeout);
-                    timeout = setTimeout(() => func.apply(this, args), wait);
-                };
-            };
-        }
         const tool = {
             name: TOOL_KEY,
             title: TOOL_LABEL,
             icon: TOOL_ICON,
             toggle: true,
             active: game.settings.get("nimble-action-tracker", "trackerVisible"),
-            onClick: window.nimbleDebounce((active) => {
+            onClick: foundry.utils.debounce((active) => {
                 game.settings.set("nimble-action-tracker", "trackerVisible", active);
                 if (active) {
                     trackerInstance.render(true);
@@ -115,7 +98,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
 
 Hooks.on("renderActorDirectory", (app, html) => {
     const button = $(`<button class="nimble-btn"><i class="fas fa-dice-d20"></i> Action Tracker</button>`);
-    button.click(debounce(() => {
+    button.click(foundry.utils.debounce(() => {
         trackerInstance.render(true, {focus: true});
     }, 300));
     $(html).find(".header-actions").append(button);
