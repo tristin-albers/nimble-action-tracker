@@ -2,7 +2,7 @@
   "id": "nimble-action-tracker",
   "title": "Nimble Action Tracker",
   "description": "A simple encounter and action tracker for the Nimble v2 system.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "authors": [{ "name": "Trist" }],
   "url": "https://github.com/tristin-albers/nimble-action-tracker",
   "manifest": "https://github.com/tristin-albers/nimble-action-tracker/releases/latest/download/module.json",
@@ -10,7 +10,7 @@
   "bugs": "https://github.com/tristin-albers/nimble-action-tracker/issues",
   "changelog": "https://github.com/tristin-albers/nimble-action-tracker/releases",
   "compatibility": {
-    "minimum": "13",
+    "minimum": "12",
     "verified": "13"
   },
   "relationships": {
