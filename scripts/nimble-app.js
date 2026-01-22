@@ -615,8 +615,11 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
             speaker: ChatMessage.getSpeaker({ actor })
         });
 
-        // Delay after chat message
-        await new Promise(resolve => setTimeout(resolve, 3600));
+        // Delay after chat message only if Dice So Nice! is active
+        const diceSoNiceActive = game.modules.get('dice-so-nice')?.active ?? false;
+        if (diceSoNiceActive) {
+            await new Promise(resolve => setTimeout(resolve, 3600));
+        }
 
         // Calculate and set result based on initiative type
         let result = roll.total;

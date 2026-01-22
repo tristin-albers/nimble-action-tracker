@@ -31,6 +31,15 @@ Hooks.once('init', () => {
         },
         default: "alternative"
     });
+    game.settings.register("nimble-action-tracker", "diceSoNiceDetected", {
+        name: "'Dice So Nice!' Detected (Read Only)",
+        hint: "Shows whether the Dice So Nice! module is active. When active, initiative rolls will pause to show dice animations.",
+        scope: "world",
+        config: true,
+        type: Boolean,
+        default: false,
+        onChange: () => {} // Prevent changes from doing anything
+    });
 });
 
 // Listen for flag changes to open/close tracker UI
@@ -58,6 +67,23 @@ Hooks.once('ready', () => {
     if (shouldShow) {
         trackerInstance.setCombatActive(combatActive);
         trackerInstance.render(true);
+    }
+
+    // Detect if Dice So Nice! is active and update the setting (GM only)
+    if (game.user.isGM) {
+        const diceSoNiceActive = game.modules.get('dice-so-nice')?.active ?? false;
+        game.settings.set("nimble-action-tracker", "diceSoNiceDetected", diceSoNiceActive);
+    }
+});
+
+// Disable the Dice So Nice checkbox in settings UI (make it read-only)
+Hooks.on('renderSettingsConfig', (_app, html) => {
+    const $html = $(html);
+    const checkbox = $html.find('input[name="nimble-action-tracker.diceSoNiceDetected"]');
+    if (checkbox.length) {
+        checkbox.prop('disabled', true);
+        checkbox.css('cursor', 'not-allowed');
+        checkbox.closest('.form-group').css('opacity', '0.6');
     }
 });
 
