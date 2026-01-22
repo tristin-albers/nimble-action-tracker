@@ -139,14 +139,6 @@ Hooks.on("getSceneControlButtons", (controls) => {
     }
 });
 
-Hooks.on("renderActorDirectory", (app, html) => {
-    const button = $(`<button class="nimble-btn"><i class="fas fa-dice-d20"></i> Action Tracker</button>`);
-    button.click(foundry.utils.debounce(() => {
-        trackerInstance.render(true, {focus: true});
-    }, 300));
-    $(html).find(".header-actions").append(button);
-});
-
 // Rerender tracker on actor flag change
 Hooks.on("updateActor", (actor, change) => {
     if (foundry.utils.hasProperty(change, "flags.nimble-action-tracker") && trackerInstance) {
