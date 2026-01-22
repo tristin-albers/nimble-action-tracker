@@ -24,8 +24,8 @@ Hooks.once('init', () => {
 // Listen for flag changes to open/close tracker UI
 Hooks.on("updateUser", (user, changes) => {
     if (user.id !== game.user.id) return;
-    if (hasProperty(changes, "flags.nimble-action-tracker.showTracker")) {
-        const show = getProperty(changes, "flags.nimble-action-tracker.showTracker");
+    if (foundry.utils.hasProperty(changes, "flags.nimble-action-tracker.showTracker")) {
+        const show = foundry.utils.getProperty(changes, "flags.nimble-action-tracker.showTracker");
         if (show) {
             combatActive = true;
             if (!trackerInstance) trackerInstance = new NimbleActionTracker();
@@ -106,7 +106,7 @@ Hooks.on("renderActorDirectory", (app, html) => {
 
 // Rerender tracker on actor flag change
 Hooks.on("updateActor", (actor, change) => {
-    if (hasProperty(change, "flags.nimble-action-tracker") && trackerInstance) {
+    if (foundry.utils.hasProperty(change, "flags.nimble-action-tracker") && trackerInstance) {
         trackerInstance.render(false);
     }
 });

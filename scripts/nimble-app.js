@@ -476,10 +476,10 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
     _setupDraggable() {
         if (game.user.isGM) {
             const header = this.element.querySelector('.gm-header');
-            if (header) new Draggable(this, this.element, header, false);
+            if (header) new foundry.applications.ux.Draggable.implementation(this, this.element, header, false);
         } else {
             const playerRow = this.element.querySelector('.player-row .row-top');
-            if (playerRow) new Draggable(this, this.element, playerRow, false);
+            if (playerRow) new foundry.applications.ux.Draggable.implementation(this, this.element, playerRow, false);
         }
     }
 
