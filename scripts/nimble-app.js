@@ -195,6 +195,7 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
     // Action handlers (instance methods for ApplicationV2)
     async _onNewRound(event, target) {
         if (!game.user.isGM) return;
+        await this.resetCombatReadiness();
         await this.colorAndPingTokensForNewRound();
     }
 
@@ -673,6 +674,17 @@ export class NimbleActionTracker extends foundry.applications.api.HandlebarsAppl
 
         // UI resets automatically on re-render
         if (pipContainer) pipContainer.classList.remove('is-loading');
+    }
+
+    async resetCombatReadiness() {
+        const initiativeType = game.settings.get("nimble-action-tracker", "initiativeType");
+        if (initiativeType !== "alternative") return;
+
+        for (const actor of game.actors.filter(a => a.type === "character" && a.hasPlayerOwner)) {
+            await actor.setFlag("nimble-action-tracker", "state", {
+                readiness: "",
+            });
+        }
     }
 
     // Color and ping all non-hidden tokens in the scene based on disposition
